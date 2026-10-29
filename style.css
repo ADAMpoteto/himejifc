@@ -903,3 +903,6 @@ a.cmt-who:hover b{color:var(--red);}
 .clubs li{display:flex;gap:14px;padding:3px 0;}
 .clubs .term{flex:0 0 7.5em;color:var(--ink2);font-family:var(--en);font-variant-numeric:tabular-nums;}
 .clubs li.now .club{font-weight:800;}
+/* ?demo 表示中の帯 */
+.demo-bar{position:sticky;top:0;z-index:999;background:#ffd400;color:#111;font-size:13px;font-weight:700;text-align:center;padding:6px 10px;}
+.demo-bar a{margin-left:12px;color:#111;text-decoration:underline;}
