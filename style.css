@@ -879,3 +879,20 @@ a.cmt-who:hover b{color:var(--red);}
 .pitch-key span{display:inline-flex;align-items:center;gap:4px;}
 .k-off{font-style:normal;font-size:8px;color:#fff;background:#c4001a;padding:1px 3px;border-radius:2px;}
 @media(max-width:480px){ .pp-off{right:-24px;font-size:9px;} }
+
+/* 役職（主将・兼任） */
+.pcard-t .roles{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;}
+.pcard-t .roles .role{margin-top:0;}
+.pcard-t .role.cap{background:var(--ink);border-color:var(--ink);color:#fff;}
+.scard .pcard-t .srole{display:block;font-size:12px;font-weight:700;color:var(--red);margin-bottom:2px;}
+.scard .pcard-t .role{margin-top:6px;}
+.staff-grid .pcard .pic{aspect-ratio:1/1;}
+
+/* 入力ツール：アシスト */
+.in-ast{margin-top:24px;padding:18px 20px;border:2px solid var(--red);}
+.in-ast h3{font-size:17px;font-weight:900;}
+.in-ast p{font-size:13px;color:var(--ink2);margin:4px 0 10px;}
+.in-ast label{display:grid;grid-template-columns:52px 140px 1fr;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line);}
+.in-ast .t{font-family:var(--en);font-weight:600;font-size:16px;}
+.in-ast select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #cfcfcf;}
+@media(max-width:560px){ .in-ast label{grid-template-columns:44px 1fr;} .in-ast select{grid-column:1/-1;} }
