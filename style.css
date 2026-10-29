@@ -906,3 +906,20 @@ a.cmt-who:hover b{color:var(--red);}
 /* ?demo 表示中の帯 */
 .demo-bar{position:sticky;top:0;z-index:999;background:#ffd400;color:#111;font-size:13px;font-weight:700;text-align:center;padding:6px 10px;}
 .demo-bar a{margin-left:12px;color:#111;text-decoration:underline;}
+/* 数字のチップ：数が半端でも空きマスを灰色にしない */
+.chips{background:transparent;border:0;gap:0;}
+.chips .chip{box-shadow:0 0 0 .5px var(--line), inset 0 0 0 .5px var(--line);}
+/* 試合一覧：これからの試合のキックオフ時間 */
+.mrow-d .ko{display:block;font-style:normal;font-family:var(--en);font-weight:600;font-size:13px;color:var(--red);margin-top:3px;}
+/* シェアボタン：アイコン＋名前（何のボタンか分かるように） */
+.share{flex-wrap:wrap;}
+.sh{width:auto;padding:0 14px 0 12px;border-radius:18px;gap:6px;}
+.sh em{font-style:normal;font-size:12px;font-weight:700;line-height:1;}
+.sh svg{width:15px;height:15px;}
+@media (max-width:640px){ .share{justify-content:flex-start;} .share>span{width:100%;margin:0 0 2px;} }
+/* 入力ページ：ポジション選び */
+.in-pos label{grid-template-columns:44px 1fr 120px;}
+.in-pos select{padding:6px;font-size:14px;}
+.in-pos-grid{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start;}
+.in-pitch .pitch{margin:0;}
+@media (max-width:760px){ .in-pos-grid{grid-template-columns:1fr;} }
