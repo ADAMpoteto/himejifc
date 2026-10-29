@@ -6,6 +6,12 @@
 <title>姫路FC オフィシャルサイト</title>
 <meta name="description" content="兵庫県姫路市の社会人サッカーチーム「姫路FC」のオフィシャルサイト。試合日程・結果、選手、記録、選手募集、スポンサー募集。">
 <meta name="apple-mobile-web-app-title" content="姫路FC">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="姫路FC オフィシャルサイト">
+<meta property="og:title" content="姫路FC オフィシャルサイト">
+<meta property="og:description" content="姫路市社会人サッカー2部リーグ所属「姫路FC」の試合日程・結果、選手・スタッフ、選手募集、スポンサー募集。">
+<meta property="og:image" content="https://adampoteto.github.io/himejifc/icon-192.png">
+<meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#ffffff">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -13,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261029n">
+<link rel="stylesheet" href="style.css?v=20261029p">
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
@@ -22,12 +28,13 @@
   <div class="hd-in">
     <a class="hd-brand" href="#home" aria-label="姫路FC ホーム">
       <img src="emblem.png" alt="" width="44" height="44">
-      <span class="hd-name"><b id="hd-name">姫路FC</b><small>HIMEJI FOOTBALL CLUB</small></span>
+      <span class="hd-name"><b id="hd-name">姫路FC</b><small id="hd-en">HIMEJI FC</small></span>
     </a>
     <nav class="hd-nav" aria-label="メニュー">
       <a href="#news" data-nav="news">ニュース</a>
       <a href="#match" data-nav="match">試合日程・結果</a>
-      <a href="#players" data-nav="players">選手</a>
+      <a href="#table" data-nav="table">順位表</a>
+      <a href="#players" data-nav="players">選手・スタッフ</a>
       <a href="#stats" data-nav="stats">記録</a>
       <a href="#history" data-nav="history">クラブ</a>
     </nav>
@@ -45,9 +52,10 @@
     <a href="#home">ホーム<small>HOME</small></a>
     <a href="#news">ニュース<small>NEWS</small></a>
     <a href="#match">試合日程・結果<small>MATCH</small></a>
-    <a href="#players">選手<small>PLAYERS</small></a>
+    <a href="#table">順位表<small>STANDINGS</small></a>
+    <a href="#players">選手・スタッフ<small>PLAYERS / STAFF</small></a>
     <a href="#stats">記録・ランキング<small>STATS</small></a>
-    <a href="#history">クラブ・順位表<small>CLUB</small></a>
+    <a href="#history">クラブ情報<small>CLUB</small></a>
   </nav>
   <div class="drawer-cta"><a class="hd-join" href="#join">選手募集</a><a class="hd-spon" href="#sponsor">スポンサー募集</a></div>
   <div class="drawer-sns" id="drawer-sns"></div>
@@ -62,7 +70,7 @@
       <div><b id="ft-club">姫路FC</b><p id="ft-desc">兵庫県姫路市の社会人サッカーチーム</p><div class="ft-sns" id="ft-sns"></div></div>
     </div>
     <nav class="ft-cols" aria-label="サイトマップ">
-      <div><h4>試合</h4><a href="#match">試合日程・結果</a><a href="#stats">記録・ランキング</a><a href="#history">順位表</a></div>
+      <div><h4>試合</h4><a href="#match">試合日程・結果</a><a href="#table">順位表</a><a href="#stats">記録・ランキング</a></div>
       <div><h4>チーム</h4><a href="#players">選手・スタッフ</a><a href="#transfer">加入・退団</a><a href="#news">ニュース</a><a href="#history">クラブ情報・歴史</a></div>
       <div><h4>募集・お問い合わせ</h4><a href="#join">選手募集</a><a href="#sponsor">スポンサー募集</a><a href="#contact">お問い合わせ</a></div>
     </nav>
@@ -70,6 +78,6 @@
   <div class="ft-bottom"><p>© <span id="ft-year">2026</span> <span id="ft-name">姫路FC</span></p></div>
 </footer>
 
-<script src="app.js?v=20261029n"></script>
+<script src="app.js?v=20261029p"></script>
 </body>
 </html>

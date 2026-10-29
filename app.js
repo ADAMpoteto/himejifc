@@ -35,7 +35,7 @@ const SHEETS = {   // [シート名, gid]
 };
 const DEFAULT_CLUB = "姫路FC";
 const HALF = 35;   /* 前半の時間（分）。姫路市2部リーグは35分ハーフ */
-const IMG_EXT = ["png", "webp", "jpg"];
+const IMG_EXT = ["jpg", "png", "webp", "jpeg"];
 /* 相手エンブレムのファイル名（英数字）。日本語のファイル名はzip解凍で文字化けすることがあるため */
 const LOGO_FILE = {
   "FCヴィエンティス白鳥":"vientis", "FCVOLTS":"volts", "TOPBOY":"topboy", "香寺SC":"kohdera",
@@ -108,7 +108,8 @@ window.imgNext = el => {
 function face(name, cls){
   const n=fullName(name), p=D.players.find(x=>same(x.name,n)), ph=p&&p.photo ? String(p.photo).trim() : "";
   /* 写真の欄にファイル名（拡張子つきでも、なしでも）を書けばそれを使う */
-  const c = ph ? (/\.(png|webp|jpe?g|gif)$/i.test(ph) ? [`images/player/${ph}`] : imgCands("player",[ph])).concat(imgCands("player",[n])) : imgCands("player",[n]);
+  const byId = p&&p.id ? imgCands("player",[p.id]) : [];
+  const c = (ph ? (/\.(png|webp|jpe?g|gif)$/i.test(ph) ? [`images/player/${ph}`] : imgCands("player",[ph])) : []).concat(byId, imgCands("player",[n]));
   return imgTag(c, n, "face "+(cls||""), "p:"+nameKey(n));
 }
 const oppFace = (name, cls) => imgTag([], name, "face "+(cls||""), "o:"+nameKey(name));
@@ -127,6 +128,7 @@ const D = { past:[], posts:[], notices:[], hist:[], sponsors:[], srec:[], matche
 const ST = { pSeason:null, luGrp:"概要", season:null, stSeason:"", trSeason:"", comp:"すべて", newsCat:"すべて", rk:"g", tblSeason:null, tblComp:null, mtab:"sum", luSide:"me" };
 
 const clubName = () => D.conf["クラブ名"] || DEFAULT_CLUB;
+const clubEn = () => String(D.conf["英語名"] || "HIMEJI FC").toUpperCase();
 const unit = () => D.conf["通貨の単位"] || "";
 function isMe(club){
   const k=nameKey(club); if(!k) return false;
@@ -279,6 +281,7 @@ async function loadAll(){
   buildNews();
   D.loaded=true;
   ["hd-name","ft-club","ft-name"].forEach(id=>{ if($(id)) $(id).textContent=clubName(); });
+  if($("hd-en")) $("hd-en").textContent = clubEn();
   if($("ft-desc")) $("ft-desc").textContent = `${D.conf["所属リーグ"]?D.conf["所属リーグ"]+"に所属する":""}社会人サッカーチームです。`;
   /* SNS（設定シートの Instagram / X / YouTube にURLを入れると出る） */
   const SNS_ICON={ Instagram:'<path d="M12 2.2c3.2 0 3.6 0 4.8.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.8.1s-3.6 0-4.8-.1c-3.3-.1-4.8-1.7-4.9-4.9C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8C2.4 3.9 3.9 2.4 7.2 2.3 8.4 2.2 8.8 2.2 12 2.2zM12 7a5 5 0 100 10 5 5 0 000-10zm0 8.2a3.2 3.2 0 110-6.4 3.2 3.2 0 010 6.4zm5.2-9.6a1.2 1.2 0 100 2.4 1.2 1.2 0 000-2.4z"/>',
@@ -362,6 +365,9 @@ function seasonsOfPlayer(name){
 }
 const latestStat = name => { const L=seasonsOfPlayer(name); return L[L.length-1]||null; };
 const profile = name => D.players.find(p=>same(p.name,name)) || null;
+function rolesOf(name){ const c=D.conf, R=[];
+  if(same(c["代表者"],name)) R.push("代表"); if(same(c["監督名"],name)) R.push("監督");
+  if(String(c["コーチ"]||"").split(/[、,，]/).some(x=>same(x.trim(),name))) R.push("コーチ"); return R; }
 /* 選手ページのURL：選手シートの「ID」（例 utsumi-tomoaki）。IDがない選手は名前から作った英数字 */
 const hash36 = s => { let h=5381; for(const c of String(s)) h=((h<<5)+h+c.codePointAt(0))>>>0; return h.toString(36); };
 function pid(name){ const n=fullName(name), P=profile(n); return (P&&P.id) || "p-"+hash36(nameKey(n)); }
@@ -646,15 +652,21 @@ function bindCal(){
   const all=$("cal-all"); if(all) all.onclick=()=>downloadIcs(D.matches.filter(m=>!m.played && m.date), "himejifc-schedule.ics");
 }
 /* ---------- シェア ---------- */
+const SH_ICON = {
+  line:'<path d="M12 3C6.5 3 2 6.6 2 11c0 3.9 3.5 7.2 8.3 7.9.3.1.8.2.9.5.1.3.1.7 0 1l-.1.9c0 .3-.2 1 .9.5s5.9-3.5 8-6C21.3 14.2 22 12.7 22 11c0-4.4-4.5-8-10-8z"/>',
+  x:'<path d="M17.8 3h3.1l-6.8 7.7 8 10.6h-6.3l-4.9-6.4L5.3 21.3H2.2l7.3-8.3L1.8 3h6.4l4.4 5.9L17.8 3zm-1.1 16.4h1.7L7.4 4.8H5.6l11.1 14.6z"/>',
+  fb:'<path d="M13.5 22v-8.2h2.8l.4-3.2h-3.2V8.5c0-.9.3-1.6 1.6-1.6h1.7V4.1c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.4H7.3v3.2h2.8V22h3.4z"/>',
+  link:'<path d="M10.6 13.4a1 1 0 0 1 0-1.4l3.5-3.5a1 1 0 1 1 1.4 1.4L12 13.4a1 1 0 0 1-1.4 0zm-3.5 4.9a3.5 3.5 0 0 1 0-5l2.1-2.1 1.4 1.4-2.1 2.1a1.5 1.5 0 1 0 2.1 2.1l2.1-2.1 1.4 1.4-2.1 2.1a3.5 3.5 0 0 1-4.9.1zm7.7-4.6-1.4-1.4 2.1-2.1a1.5 1.5 0 1 0-2.1-2.1l-2.1 2.1-1.4-1.4 2.1-2.1a3.5 3.5 0 1 1 4.9 4.9l-2.1 2.1z"/>' };
 function shareBar(text){
   const u=encodeURIComponent(location.href), t=encodeURIComponent(text);
-  return `<div class="share"><span>シェアする</span>
-    <a class="sh line" href="https://social-plugins.line.me/lineit/share?url=${u}" target="_blank" rel="noopener">LINE</a>
-    <a class="sh x" href="https://twitter.com/intent/tweet?text=${t}&url=${u}" target="_blank" rel="noopener">X</a>
-    <a class="sh fb" href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener">Facebook</a>
-    <button class="sh copy-link" type="button">リンクをコピー</button></div>`;
+  const ic = k => `<svg viewBox="0 0 24 24" aria-hidden="true">${SH_ICON[k]}</svg>`;
+  return `<div class="share"><span>SHARE</span>
+    <a class="sh" href="https://social-plugins.line.me/lineit/share?url=${u}" target="_blank" rel="noopener" aria-label="LINEで送る">${ic("line")}</a>
+    <a class="sh" href="https://twitter.com/intent/tweet?text=${t}&url=${u}" target="_blank" rel="noopener" aria-label="Xでポスト">${ic("x")}</a>
+    <a class="sh" href="https://www.facebook.com/sharer/sharer.php?u=${u}" target="_blank" rel="noopener" aria-label="Facebookでシェア">${ic("fb")}</a>
+    <button class="sh copy-link" type="button" aria-label="リンクをコピー">${ic("link")}<i>コピーしました</i></button></div>`;
 }
-function bindShare(){ document.querySelectorAll(".copy-link").forEach(b=>b.onclick=async()=>{ try{ await navigator.clipboard.writeText(location.href); }catch(e){} b.textContent="コピーしました"; setTimeout(()=>b.textContent="リンクをコピー",2000); }); }
+function bindShare(){ document.querySelectorAll(".copy-link").forEach(b=>b.onclick=async()=>{ try{ await navigator.clipboard.writeText(location.href); }catch(e){} b.classList.add("done"); setTimeout(()=>b.classList.remove("done"),1800); }); }
 
 /* ---------- 公式SNS ---------- */
 function snsSection(){
@@ -737,15 +749,13 @@ function vHome(){
 
   ${sched.length?`<section class="sched"><div class="wrap">
     ${secH("SCHEDULE","試合日程・結果","#match")}
-    <div class="sc-wrap"><button class="sc-nav prev" id="sc-prev" aria-label="前の試合">‹</button>
-      <div class="sc-strip" id="sc-strip">${sched.map(m=>schedCard(m, m===next)).join("")}</div>
-      <button class="sc-nav nextb" id="sc-next" aria-label="次の試合">›</button></div>
+    <div class="sc-strip" id="sc-strip">${sched.map(m=>schedCard(m, m===next)).join("")}</div>
   </div></section>`:""}
 
   <div class="wrap home-grid">
     <section>${secH("NEWS","ニュース","#news")}
       ${D.news.length?`<div class="nls">${D.news.slice(0,6).map(newsLine).join("")}</div>`:empty("ニュースはまだありません。")}</section>
-    ${tb?`<section>${secH("STANDINGS","順位表","#history")}${tb}</section>`:""}
+    ${tb?`<section>${secH("STANDINGS","順位表","#table")}${tb}</section>`:""}
   </div>
 
   <section class="cta2"><div class="wrap">
@@ -768,10 +778,7 @@ function bHome(){
   const box=$("sc-strip"); if(!box) return;
   const nx=box.querySelector(".sc.next") || [...box.querySelectorAll(".sc.done")].pop();
   if(nx) box.scrollLeft = Math.max(0, nx.offsetLeft - box.offsetLeft - (box.clientWidth>700 ? box.clientWidth/2 - nx.clientWidth/2 : 16));
-  const step = () => (box.querySelector(".sc")||{clientWidth:240}).clientWidth*2;
-  const p=$("sc-prev"), n=$("sc-next");
-  if(p) p.onclick=()=>box.scrollBy({left:-step(),behavior:"smooth"});
-  if(n) n.onclick=()=>box.scrollBy({left:step(),behavior:"smooth"});
+
 }
 
 /* ---------- 試合結果の入力ツール（#input）----------
@@ -904,6 +911,26 @@ function bInput(){
 
 /* ---------- 選手募集・スポンサー募集 ---------- */
 const CONTACT_TYPES = { join:"入団・練習参加について", sponsor:"スポンサーについて", media:"取材について", other:"その他" };
+/* [name, ラベル, 種類, 必須, 選択肢/placeholder, 横いっぱい] */
+const CONTACT_FIELDS = {
+  join:   [["お名前","お名前","text",1],["年齢","年齢","number",1],["email","メールアドレス","email",1],["電話番号","電話番号","tel",0],
+           ["希望ポジション","希望ポジション","select",1,["GK","DF","MF","FW","どこでも"]],["サッカー歴","サッカー歴（学校・チームなど）","textarea",1,"例：○○高校サッカー部（3年間）、○○FC など",1],
+           ["練習参加の希望日","練習参加の希望日","text",0,"例：○月○日、土曜日ならいつでも など",1],["内容","その他・ご質問","textarea",0,"",1]],
+  sponsor:[["会社・団体名","会社・団体名","text",1],["お名前","ご担当者名","text",1],["email","メールアドレス","email",1],["電話番号","電話番号","tel",0],
+           ["興味のあるプラン","興味のあるプラン","plan",0,"",1],["内容","お問い合わせ内容","textarea",1,"",1]],
+  media:  [["媒体名","媒体名（新聞・テレビ・Webなど）","text",1],["お名前","ご担当者名","text",1],["email","メールアドレス","email",1],["電話番号","電話番号","tel",0],
+           ["取材希望日","取材希望日","text",0,"",1],["内容","取材の内容","textarea",1,"",1]],
+  other:  [["お名前","お名前","text",1],["email","メールアドレス","email",1],["電話番号","電話番号","tel",0],["内容","お問い合わせ内容","textarea",1,"",1]] };
+function contactFields(type, keep){
+  const plans=D.sponsors.filter(x=>x.kind==="プラン").map(x=>x.name).concat(["まだ決めていない"]);
+  return CONTACT_FIELDS[type].map(([n,l,t,req,opt,wide])=>{ const v=esc((keep&&keep[n])||"");
+    const lab=`<span>${esc(l)}${req?"<em>必須</em>":""}</span>`, rq=req?" required":"";
+    let el;
+    if(t==="textarea") el=`<textarea name="${esc(n)}" rows="${n==="内容"?6:3}"${rq} placeholder="${esc(opt||"")}">${v}</textarea>`;
+    else if(t==="select"||t==="plan"){ const os=t==="plan"?plans:opt; el=`<select name="${esc(n)}"${rq}><option value="">選んでください</option>${os.map(o=>`<option${keep&&keep[n]===o?" selected":""}>${esc(o)}</option>`).join("")}</select>`; }
+    else el=`<input name="${esc(n)}" type="${t}" value="${v}"${rq}${t==="email"?' autocomplete="email"':n==="お名前"?' autocomplete="name"':t==="tel"?' autocomplete="tel"':""}${t==="number"?' min="10" max="80" inputmode="numeric"':""} placeholder="${esc(opt||"")}">`;
+    return `<label${wide||t==="textarea"?' class="wide"':""}>${lab}${el}</label>`; }).join("");
+}
 function contactBlock(kind){
   const k = kind==="スポンサー" ? "sponsor" : kind==="入団" ? "join" : "other";
   return `<div class="contact"><h3>お問い合わせ</h3><p>${esc(kind)}についてのお問い合わせは、こちらのフォームからどうぞ。</p>
@@ -915,18 +942,17 @@ function vContact(arg){
   return `${band("CONTACT","お問い合わせ")}<div class="wrap narrow page">
     <p class="lead-s">${esc(clubName())}へのお問い合わせは、下のフォームからお送りください。内容を確認のうえ、担当者からご連絡します。</p>
     <form class="cform" id="cform" novalidate>
-      <label><span>お問い合わせの種類<em>必須</em></span><select name="種類" required>${Object.entries(CONTACT_TYPES).map(([k,v])=>`<option value="${esc(v)}"${k===sel?" selected":""}>${esc(v)}</option>`).join("")}</select></label>
-      <label><span>お名前<em>必須</em></span><input name="お名前" required autocomplete="name"></label>
-      <label><span>会社・団体名</span><input name="会社・団体名" autocomplete="organization"></label>
-      <label><span>メールアドレス<em>必須</em></span><input name="email" type="email" required autocomplete="email"></label>
-      <label><span>電話番号</span><input name="電話番号" type="tel" autocomplete="tel"></label>
-      <label class="wide"><span>お問い合わせ内容<em>必須</em></span><textarea name="内容" rows="7" required></textarea></label>
+      <label class="wide"><span>お問い合わせの種類<em>必須</em></span><div class="ctype" id="ctype">${Object.entries(CONTACT_TYPES).map(([k,v])=>`<button type="button" data-k="${k}"${k===sel?' class="on"':""}>${esc(v.replace(/について$/,""))}</button>`).join("")}</div><input type="hidden" name="種類" value="${esc(CONTACT_TYPES[sel])}"></label>
+      <div class="cfields" id="cfields">${contactFields(sel)}</div>
       <input type="text" name="_honey" class="hp" tabindex="-1" autocomplete="off">
       <div class="cform-foot">${ok?`<button class="btn" type="submit">送信する</button>`:`<p class="contact-wait">お問い合わせフォームは準備中です。</p>`}<p class="cform-msg" id="cform-msg"></p></div>
     </form></div>`;
 }
 function bContact(){
   const f=$("cform"); if(!f) return;
+  document.querySelectorAll("#ctype button").forEach(b=>b.onclick=()=>{ const keep=Object.fromEntries(new FormData(f).entries());
+    document.querySelectorAll("#ctype button").forEach(x=>x.classList.toggle("on",x===b)); f.querySelector('input[name="種類"]').value=CONTACT_TYPES[b.dataset.k];
+    $("cfields").innerHTML=contactFields(b.dataset.k, keep); history.replaceState(history.state,"",`#contact/${b.dataset.k}`); });
   f.onsubmit=async e=>{ e.preventDefault();
     const msg=$("cform-msg"), btn=f.querySelector("button"); const fd=new FormData(f);
     const miss=[...f.querySelectorAll("[required]")].filter(x=>!String(x.value).trim());
@@ -969,10 +995,11 @@ function vSponsor(){
   const facts=[["所属リーグ",c["所属リーグ"]],[`${s||""}シーズン`, r.n?`${rk?rk+"位　":""}${r.w}勝${r.d}分${r.l}敗`:""]].filter(([,v])=>v);
   return `${band("PARTNER","スポンサー募集")}<div class="wrap narrow page">
     <div class="lead"><span class="state on">募集中</span><h2>${esc(clubName())}を一緒に<br class="sp">支えてください</h2><p>${esc(msg)}</p></div>
-    ${(()=>{ const L=String(c["チーム理念"]||"").split(/\r?\n|／/).map(x=>x.trim()).filter(Boolean); if(!L.length) return "";
-      return `<section class="philo"><div class="philo-h"><span>PHILOSOPHY</span>チーム理念</div>
-        <ol>${L.map((x,i)=>`<li><b>${String(i+1).padStart(2,"0")}</b><p>${esc(x)}</p></li>`).join("")}</ol></section>`; })()}
+    ${(()=>{ const L=philoList(); if(!L.length) return "";
+      return `<section class="philo"><div class="philo-h"><span>PHILOSOPHY</span>チーム理念</div>${philoHtml(L)}</section>`; })()}
     ${facts.length?`<h3 class="h3">${esc(clubName())}について</h3><dl class="spec">${facts.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl><p class="more-link"><a href="#history">クラブ情報を見る</a></p>`:""}
+    ${(()=>{ const U=String(c["スポンサー料の使い道"]||"").split(/\r?\n|、/).map(x=>x.trim()).filter(Boolean); if(!U.length) return "";
+      return `<h3 class="h3">スポンサー料の使い道</h3><p class="muted">いただいたスポンサー料は、チームの活動に大切に使わせていただきます。</p><ul class="uses">${U.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`; })()}
     ${plans.length?`<h3 class="h3">スポンサープラン</h3><div class="plans">${plans.map(x=>`<div class="plan"><b>${esc(x.name)}</b><div class="plan-p">${x.price?esc(x.price):"金額はお問い合わせください"}</div><p>${esc(x.body)}</p></div>`).join("")}</div>
       <p class="note">内容や金額はご相談に応じます。</p>`:""}
     <h3 class="h3">スポンサー企業・団体</h3>
@@ -1064,7 +1091,7 @@ function vMatchDetail(arg){
       ${m.played?`<div class="mh-res"><span class="res ${resCls(m)}">${resEN(m)}</span></div>
       <div class="mh-goals"><ul class="r">${goalsOf(S.hSide).map(x=>`<li>${x}${BALL}</li>`).join("")}</ul><ul>${goalsOf(S.aSide).map(x=>`<li>${BALL}${x}</li>`).join("")}</ul></div>`:""}
     </div></section>
-    ${m.played?`<nav class="mtabs"><div class="mtabs-in">${T.map(([k,en,jp,ok])=>`<button data-t="${k}"${k===ST.mtab?' class="on"':""}${ok?"":" disabled"}>${en}<small>${jp}</small></button>`).join("")}</div></nav>`:""}
+    ${m.played&&T.filter(t=>t[3]).length>1?`<nav class="mtabs"><div class="mtabs-in" style="grid-template-columns:repeat(${T.filter(t=>t[3]).length},1fr)">${T.filter(t=>t[3]).map(([k,en,jp])=>`<button data-t="${k}"${k===ST.mtab?' class="on"':""}>${jp}<small>${en}</small></button>`).join("")}</div></nav>`:""}
     <div class="wrap" style="max-width:1000px">
       <div class="crumb"><a href="#home">HOME</a> › <a href="#match">MATCH</a></div>
       ${m.played?body:`<div class="pre">${m.time||m.venue?`<dl class="spec">${m.time?`<div><dt>キックオフ</dt><dd>${esc(m.time)}</dd></div>`:""}${m.venue?`<div><dt>会場</dt><dd>${esc(m.venue)}</dd></div>`:""}</dl>`:""}${calBtns(m)}</div>${h2hHtml(m)}`}
@@ -1144,9 +1171,12 @@ function pitchHtml(L, form, side, m){
   const P=placeXI(L, form);
   if(!P.length) return "";
   return `<div class="pitch"><div class="arc"></div>${P.map(({l,x,y,w})=>{
-    const off = m.ev.some(e=>e.side===side&&e.kind==="交代"&&same(e.rel,l.name)) || (l.min!=null && l.min<90 && l.role==="先発");
-    const ic=`${l.g?BALL.repeat(Math.min(l.g,3)):""}${l.yc?'<i class="ico-y"></i>':""}${l.rc?'<i class="ico-r"></i>':""}`;
-    const inner=`<div class="pp-s">${l.no??""}${off?'<span class="pp-off" title="交代">▼</span>':""}${ic?`<span class="pp-i">${ic}</span>`:""}</div><span class="pp-n">${brk(side==="me"?surname(l.name):l.name)}</span>`;
+    const off = m.ev.some(e=>e.side===side&&e.kind==="交代"&&same(e.rel,l.name)) || (l.min!=null && l.min<HALF*2 && l.role==="先発");
+    const ic=`${l.g?`<span class="pp-g">${"⚽".repeat(Math.min(l.g,3))}</span>`:""}${l.yc?'<i class="ico-y"></i>':""}${l.rc?'<i class="ico-r"></i>':""}`;
+    /* 途中で下がった選手：赤い矢印＋交代した時間 */
+    const subE = m.ev.find(e=>e.side===side&&e.kind==="交代"&&same(e.rel,l.name));
+    const offMin = subE ? (subE.note==="ハーフタイム" ? "HT" : `${subE.min}'`) : (l.min!=null && l.role==="先発" && l.min<HALF*2 ? `${l.min}'` : "");
+    const inner=`<div class="pp-s">${l.no??""}${off?`<span class="pp-off" title="${offMin?offMin.replace("'","分")+"に":""}交代で退いた"><b>▼</b>${esc(offMin)}</span>`:""}${ic?`<span class="pp-i">${ic}</span>`:""}</div><span class="pp-n">${brk(side==="me"?surname(l.name):l.name)}</span>`;
     return `<div class="pp ${side==="opp"?"opp":""} ${posGroup(l.pos)==="GK"?"gk":""}" style="left:${x}%;top:${y}%;width:${Math.min(24,w||24).toFixed(1)}%">${side==="me"?`<a href="#player/${pid(l.name)}">${inner}</a>`:inner}</div>`; }).join("")}</div>`;
 }
 /* 出場選手の表 */
@@ -1172,7 +1202,7 @@ function tabLineup(m,S){
     const nm=l=> side==="me"?`<a href="#player/${pid(l.name)}">${esc(l.name)}</a>`:esc(l.name);
     const offFor = l => { const e=m.ev.find(e=>e.side===side&&e.kind==="交代"&&same(e.player,l.name)); return e ? `${esc(e.min)}' OUT ${esc(e.rel)}` : (l.min!=null?`${l.min}分`:""); };
     return `<div><div class="lu-h">${logo(club)}<span>${esc(club)}</span>${form?`<span class="form-tag">${esc(form)}</span>`:""}</div>
-      ${pitchHtml(L, form, side, m)}
+      ${pitchHtml(L, form, side, m)}${L.some(l=>l.role==="先発")?`<p class="pitch-key"><span><i class="k-off">▼</i>交代で退いた時間</span><span>⚽ 得点</span><span><i class="ico-y"></i> 警告</span></p>`:""}
       ${subs.length?`<div class="subs"><h4>SUBSTITUTES <small style="font-family:'Noto Sans JP';font-size:11px;font-weight:500">途中出場</small></h4><ul>${subs.map(l=>`<li><span class="no">${l.no??""}</span>${nm(l)}<small style="color:var(--ink3)">${esc(l.pos)}　${offFor(l)}</small></li>`).join("")}</ul></div>`:""}
       ${bench.length?`<div class="subs"><h4>BENCH <small style="font-family:'Noto Sans JP';font-size:11px;font-weight:500">ベンチ</small></h4><ul>${bench.map(l=>`<li><span class="no">${l.no??""}</span>${nm(l)}<small style="color:var(--ink3)">${esc(l.pos)}</small></li>`).join("")}</ul></div>`:""}</div>`; };
   const side=ST.luSide==="opp"?"opp":"me";
@@ -1218,7 +1248,7 @@ function squad(s){
 }
 function playerCard(r){ const P=r.prof||profile(r.name), no=r.no??(P&&P.no);
   return `<a class="pcard" href="#player/${pid(r.name)}"><div class="pic">${face(r.name)}${no!=null?`<span class="no">${no}</span>`:""}</div>
-    <div class="pcard-t"><b>${esc(r.name)}</b>${P&&P.en?`<span>${esc(P.en)}</span>`:""}</div></a>`; }
+    <div class="pcard-t"><b>${esc(r.name)}</b>${P&&P.en?`<span>${esc(P.en)}</span>`:""}${rolesOf(r.name).length?`<em class="role">${rolesOf(r.name).join("・")}兼任</em>`:""}</div></a>`; }
 function vPlayers(){
   const s=ST.season, {rows, note}=squad(s);
   const by={}; rows.forEach(r=>{ const g=posGroup((r.prof&&r.prof.pos)||r.pos); (by[g]=by[g]||[]).push(r); });
@@ -1331,7 +1361,7 @@ function vPlayerDetail(arg){
   return `<section class="pd"><div class="pd-in">
       <div class="pd-pic">${face(name)}</div>
       <div class="pd-main">
-        <div class="pd-line">${no!=null?`<span class="pd-no">${no}</span>`:""}${pos?`<span class="pd-pos">${esc(pos)}</span>`:""}</div>
+        <div class="pd-line">${no!=null?`<span class="pd-no">${no}</span>`:""}${pos?`<span class="pd-pos">${esc(pos)}</span>`:""}${rolesOf(name).map(x=>`<span class="pd-role">${x}</span>`).join("")}</div>
         ${P&&P.en?`<div class="pd-en">${esc(P.en)}</div>`:""}
         <h1 class="pd-name">${esc(name)}</h1>
         ${P&&P.kana?`<div class="pd-kana">${esc(P.kana)}</div>`:""}
@@ -1439,6 +1469,22 @@ function vTransfer(){
 const squadTabs = cur => `<div class="sq-tabs"><a href="#players"${cur==="players"?' class="on"':""}>選手・スタッフ</a><a href="#transfer"${cur==="transfer"?' class="on"':""}>加入・退団</a></div>`;
 function bTransfer(){ bindSel("tr-season", v=>{ ST.trSeason=v; render(); }); }
 
+/* ---------- 順位表 ---------- */
+function vTable(){
+  const tSeasons=[...new Set(D.table.map(r=>r.season))].sort().reverse();
+  const ts=ST.tblSeason && tSeasons.includes(ST.tblSeason) ? ST.tblSeason : tSeasons[0];
+  const comps=[...new Set(D.table.filter(r=>r.season===ts).map(r=>r.comp))];
+  const tc= comps.includes(ST.tblComp) ? ST.tblComp : comps[0];
+  const live = D.matches.some(m=>m.season===ts && !m.played && (!tc || m.comp===tc));
+  const lastPlayed = D.played.filter(m=>m.season===ts && (!tc||m.comp===tc)).pop();
+  return `${band("STANDINGS","順位表")}<div class="wrap" style="max-width:1000px">
+    ${ts?`<div class="toolbar">${tSeasons.length>1?`<select class="sel" id="hs-season">${tSeasons.map(x=>`<option${x===ts?" selected":""}>${esc(x)}シーズン</option>`).join("")}</select>`:""}
+      ${comps.length>1?`<select class="sel" id="hs-comp">${comps.map(x=>`<option${x===tc?" selected":""}>${esc(x)}</option>`).join("")}</select>`:""}</div>
+      <h2 class="tbl-h">${esc(ts)} ${esc(tc||"")}${live&&lastPlayed?`<small>${esc(lastPlayed.round||"")}終了時点</small>`:""}</h2>
+      ${standing(ts, tc)}`:empty("順位表はまだありません。")}</div>`;
+}
+function bTable(){ bindSel("hs-season", v=>{ ST.tblSeason=v.replace(/シーズン$/,""); ST.tblComp=null; render(); }); bindSel("hs-comp", v=>{ ST.tblComp=v; render(); }); }
+
 /* ---------- CLUB（歴史・順位表） ---------- */
 function standing(season, comp, mini){
   const seasons=[...new Set(D.table.map(r=>r.season))].sort().reverse();
@@ -1475,29 +1521,30 @@ function kitSvg(cols){
     <path d="M32 82 L88 82 L92 112 L64 112 L60 98 L56 112 L28 112Z" fill="${c(1)}" stroke="${st(1)}" stroke-width="1.5"${dash(1)}/>
     <path d="M34 116 L50 116 L50 146 L34 146Z M70 116 L86 116 L86 146 L70 146Z" fill="${c(2)}" stroke="${st(2)}" stroke-width="1.5"${dash(2)}/></svg>`;
 }
+/* チーム理念：1行に1つ。「理念：説明」と書くと説明つき */
+const philoList = () => String(D.conf["チーム理念"]||"").split(/\r?\n|／/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/^(.+?)[：:]\s*(.+)$/); return m?{t:m[1].trim(),d:m[2].trim()}:{t:x,d:""}; });
+const philoHtml = L => `<ol class="philo-list">${L.map((x,i)=>`<li><b>${String(i+1).padStart(2,"0")}</b><div><p>${esc(x.t)}</p>${x.d?`<span>${esc(x.d)}</span>`:""}</div></li>`).join("")}</ol>`;
 const clubSec = (id, en, jp) => `<div class="cs-h" id="${id}"><span>${en}</span><h2>${jp}</h2></div>`;
 function vHistory(){
   const c=D.conf;
   const titles=[]; D.seasons.forEach(S=>{ if(/^1$/.test(S.rank)) titles.push([S.league||"リーグ",S.season]);
     [["市民大会",S.cup],["播州大会",S.lcup],["その他の大会",S.intl]].forEach(([k,v])=>{ if(/^優勝/.test(v||"")) titles.push([k,S.season]); }); });
   const tc={}; titles.forEach(([k,se])=>(tc[k]=tc[k]||[]).push(se));
-  const prof=[["クラブ名",clubName()],["設立",c["設立"]],["代表",c["代表者"]],["監督",c["監督名"]],["コーチ",c["コーチ"]],["所属リーグ",c["所属リーグ"]],["練習場所",c["練習場所"]],["選手の年代",c["メンバー"]]].filter(([,v])=>v);
-  const philo=String(c["チーム理念"]||"").split(/\r?\n|／/).map(x=>x.trim()).filter(Boolean);
-  const staff=[["代表",c["代表者"]],["監督",c["監督名"]],...String(c["コーチ"]||"").split(/[、,，]/).map(x=>["コーチ",x.trim()])].filter(([,v])=>v);
+  const prof=[["クラブ名",clubName()],["設立",c["設立"]],["代表",c["代表者"]],["所属リーグ",c["所属リーグ"]],["練習場所",c["練習場所"]],["選手の年代",c["メンバー"]]].filter(([,v])=>v);
+  const philo=philoList();
   const hy={}; D.hist.forEach(h=>(hy[h.y]=hy[h.y]||[]).push(h.t));
   const allS=[...new Set([...D.seasons.map(S=>S.season), ...D.seasonList])].sort().reverse();
   const recOf = se => { const r=record(ofSeason(se)); if(r.n) return r; const S=seasonInfo(se); if(S && S.rec[0]!=null) return {n:1,w:S.rec[0],d:S.rec[1]||0,l:S.rec[2]||0,gf:S.rec[3],ga:S.rec[4]}; return null; };
   const topScorer = se => { const L=luAgg(se).filter(r=>r.g>0); const R=(L.length?L:D.srec.filter(r=>r.season===se&&r.g>0)).slice().sort((a,b)=>b.g-a.g);
     if(!R.length) return ""; const mx=R[0].g; return R.filter(r=>r.g===mx).map(r=>esc(r.name)).join("、")+`（${mx}点）`; };
-  const cupCols=[["市民大会","cup"],["播州大会","lcup"],["その他の大会","intl"]].filter(([,k])=>D.seasons.some(S=>S[k]));
-  const tSeasons=[...new Set(D.table.map(r=>r.season))].sort().reverse();
-  const ts=ST.tblSeason && tSeasons.includes(ST.tblSeason) ? ST.tblSeason : tSeasons[0];
-  const comps=[...new Set(D.table.filter(r=>r.season===ts).map(r=>r.comp))];
-  const nav=[["c-profile","クラブ概要",1],["c-philo","チーム理念",philo.length],["c-staff","スタッフ",staff.length],["c-history","沿革",D.hist.length],["c-titles","タイトル",Object.keys(tc).length],["c-records","歴代成績",allS.length],["c-table","順位表",ts]].filter(x=>x[2]);
+  /* カップ戦：出る大会はカテゴリーで変わるので、入っているものをまとめて1列に */
+  const cupOf = S => [["市民大会",S.cup],["播州大会",S.lcup],["",S.intl]].filter(([,v])=>v).map(([k,v])=>k?`${k} ${v}`:v).join("／");
+  const hasCup = D.seasons.some(S=>cupOf(S));
+  const nav=[["c-profile","クラブ概要",1],["c-philo","チーム理念",philo.length],["c-history","沿革",D.hist.length],["c-titles","タイトル",Object.keys(tc).length],["c-records","歴代成績",allS.length]].filter(x=>x[2]);
   const cur=ST.season, r=record(ofSeason(cur)), rk=myRank(cur);
   return `<section class="club-hero"><div class="ch-in">
       ${logo(clubName(),"ch-logo")}
-      <div><span class="ch-en">${esc(String(c["英語名"]||"HIMEJI FC").replace(/\s*F\.?C\.?$/i,"").toUpperCase())}<b>FOOTBALL CLUB</b></span><h1>${esc(clubName())}</h1>
+      <div><span class="ch-en">${esc(clubEn())}</span><h1>${esc(clubName())}</h1>
         <p>${esc(c["所属リーグ"]||"")}${rk&&r.n?`　${esc(cur)}シーズン ${esc(rk)}位（${r.w}勝${r.d}分${r.l}敗）`:""}</p></div>
     </div></section>
     <nav class="club-nav"><div class="cn-in">${nav.map(([id,t])=>`<button data-to="${id}">${t}</button>`).join("")}</div></nav>
@@ -1505,22 +1552,19 @@ function vHistory(){
     ${clubSec("c-profile","PROFILE","クラブ概要")}
     <dl class="spec">${prof.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>
 
-    ${philo.length?`${clubSec("c-philo","PHILOSOPHY","チーム理念")}<ol class="philo-list">${philo.map((x,i)=>`<li><b>${String(i+1).padStart(2,"0")}</b><p>${esc(x)}</p></li>`).join("")}</ol>`:""}
-
-    ${staff.length?`${clubSec("c-staff","STAFF","スタッフ")}<div class="staff">${staff.map(([k,v])=>{ const P=profile(v); return `<${P?`a href="#player/${pid(v)}"`:"div"} class="st"><small>${k}</small><b>${esc(v)}</b>${P&&P.en?`<span>${esc(P.en)}</span>`:""}</${P?"a":"div"}>`; }).join("")}</div>`:""}
+    ${philo.length?`${clubSec("c-philo","PHILOSOPHY","チーム理念")}${philoHtml(philo)}`:""}
+    <p class="more-link"><a href="#players">選手・スタッフを見る</a></p>
 
     ${D.hist.length?`${clubSec("c-history","HISTORY","沿革")}<ol class="hist">${Object.keys(hy).sort().map(y=>`<li><b>${esc(y)}</b><ul>${hy[y].map(t=>`<li>${esc(t)}</li>`).join("")}</ul></li>`).join("")}</ol>`:""}
 
     ${Object.keys(tc).length?`${clubSec("c-titles","TITLES","獲得タイトル")}<div class="ti-grid">${Object.keys(tc).map(k=>`<div class="ti"><b>${tc[k].length}<small>回</small></b><div>${esc(k)}</div><p>${esc(tc[k].join("、"))}</p></div>`).join("")}</div>`:""}
 
-    ${allS.length?`${clubSec("c-records","RECORDS","歴代成績")}<div class="tw"><table class="t hist-t"><thead><tr><th>シーズン</th><th class="l">リーグ</th><th>順位</th><th>勝-分-敗</th><th>得点-失点</th>${cupCols.map(([k])=>`<th>${k}</th>`).join("")}<th class="l">チーム得点王</th></tr></thead><tbody>
+    ${allS.length?`${clubSec("c-records","RECORDS","歴代成績")}<div class="tw"><table class="t hist-t"><thead><tr><th>シーズン</th><th class="l">リーグ</th><th>順位</th><th>勝-分-敗</th><th>得点-失点</th>${hasCup?`<th class="l">カップ戦</th>`:""}<th class="l">チーム得点王</th></tr></thead><tbody>
       ${allS.map(se=>{ const S=seasonInfo(se)||{}, r=recOf(se), rk=myRank(se), live=D.matches.some(m=>m.season===se&&!m.played);
         return `<tr><th>${esc(se)}</th><td class="l">${esc((S.league||leagueName(se)||"").replace(/姫路市社会人サッカー/,"姫路市"))}</td>
           <td class="num${rk==="1"&&!live?" gold":""}">${rk?`${esc(rk)}位${live?'<small>（途中）</small>':""}`:"-"}</td><td>${r?`${r.w}-${r.d}-${r.l}`:"-"}</td><td>${r&&r.gf!=null?`${r.gf}-${r.ga}`:"-"}</td>
-          ${cupCols.map(([,k])=>`<td${/^優勝/.test(S[k]||"")?' class="gold"':""}>${esc(S[k]||"-")}</td>`).join("")}<td class="l">${topScorer(se)||"-"}</td></tr>`; }).join("")}</tbody></table></div>`:""}
-
-    ${ts?`${clubSec("c-table","STANDINGS","順位表")}<div class="toolbar">${tSeasons.length>1?`<select class="sel" id="hs-season">${tSeasons.map(x=>`<option${x===ts?" selected":""}>${esc(x)}</option>`).join("")}</select>`:""}
-      ${comps.length>1?`<select class="sel" id="hs-comp">${comps.map(x=>`<option${x===ST.tblComp?" selected":""}>${esc(x)}</option>`).join("")}</select>`:""}</div>${standing(ts, ST.tblComp)}`:""}
+          ${hasCup?`<td class="l${/優勝/.test(cupOf(S))?" gold":""}">${esc(cupOf(S)||"-")}</td>`:""}<td class="l">${topScorer(se)||"-"}</td></tr>`; }).join("")}</tbody></table></div>
+      <p class="more-link"><a href="#table">今シーズンの順位表を見る</a></p>`:""}
   </div>`;
 }
 function bHistory(){ bindSel("hs-season", v=>{ ST.tblSeason=v; ST.tblComp=null; render(); }); bindSel("hs-comp", v=>{ ST.tblComp=v; render(); });
@@ -1542,6 +1586,7 @@ const ROUTES = {
   contact:  [()=>vContact(""), bContact, "お問い合わせ", vContact, bContact],
   sponsor:  [vSponsor, null, "スポンサー募集"],
   transfer: [vTransfer, bTransfer, "加入・退団"],
+  table:    [vTable, bTable, "順位表"],
   input:    [vInput, bInput, "試合結果の入力"]
 };
 function parseHash(){ const h=decodeURIComponent((location.hash||"").replace(/^#/,"")); const i=h.indexOf("/"); return i<0 ? {page:h||"home", arg:null} : {page:h.slice(0,i), arg:h.slice(i+1)}; }
@@ -1560,11 +1605,27 @@ function render(){
   if(page==="match" && detail && key!==lastKey && !String(arg).includes("/")) ST.mtab="sum";
   view.innerHTML = detail ? R[3](arg) : (R[0]?R[0]():"");
   if(detail && R[4]) R[4](); else if(!detail && R[1]) R[1]();
+  hscroll();
   let title=R[2];
   if(detail){ const h=view.querySelector(".nd-head h1,.pd-name,.mh-comp"); if(h) title=h.textContent.trim(); }
   document.title = page==="home" ? `${clubName()} オフィシャルサイト` : `${title} | ${clubName()}`;
   if(key!==lastKey){ const y=POS[sid]; scrollToY(y!=null ? y : 0); lastKey=key; }
 }
+/* ---------- 横スクロールできる所を分かるように ----------
+   左右に続きがあるときは、端をぼかして矢印ボタンを出す */
+function hscroll(){
+  document.querySelectorAll(".sc-strip,.pl-strip,.cn-in,.tw,.mlist-x").forEach(el=>{
+    let w=el.parentElement;
+    if(!w.classList.contains("hs")){ w=document.createElement("div"); w.className="hs"+(el.classList.contains("tw")?" hs-t":""); el.parentNode.insertBefore(w,el); w.appendChild(el);
+      ["prev","next"].forEach(d=>{ const b=document.createElement("button"); b.type="button"; b.className="hs-btn "+d; b.setAttribute("aria-label", d==="prev"?"左へ":"右へ"); b.innerHTML=d==="prev"?"‹":"›";
+        b.onclick=()=>el.scrollBy({left:(d==="prev"?-1:1)*Math.max(200, el.clientWidth*0.8), behavior:"smooth"}); w.appendChild(b); }); }
+    const up=()=>{ const l=el.scrollLeft>4, r=el.scrollLeft+el.clientWidth<el.scrollWidth-4; w.classList.toggle("l",l); w.classList.toggle("r",r); };
+    if(!el._hs){ el.addEventListener("scroll",up,{passive:true}); el._hs=1; }
+    up(); setTimeout(up,300);
+  });
+}
+window.addEventListener("resize", ()=>hscroll());
+
 /* ---------- スクロール位置 ----------
    ページ（履歴）ごとにスクロール位置を覚えておき、ブラウザの「戻る」「進む」ではその位置に戻す。
    新しく開いたページは一番上から。 */
