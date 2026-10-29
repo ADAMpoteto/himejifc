@@ -27,7 +27,14 @@ const SHEETS = {   // [シート名, gid]
   conf:   ["設定",         106]
 };
 const DEFAULT_CLUB = "姫路FC";
+const HALF = 35;   /* 前半の時間（分）。姫路市2部リーグは35分ハーフ */
 const IMG_EXT = ["png", "webp", "jpg"];
+/* 相手エンブレムのファイル名（英数字）。日本語のファイル名はzip解凍で文字化けすることがあるため */
+const LOGO_FILE = {
+  "FCヴィエンティス白鳥":"vientis", "FCVOLTS":"volts", "TOPBOY":"topboy", "香寺SC":"kohdera",
+  "FCリザーブ":"reserve", "FCWINDS":"winds", "MEGERE":"megere", "エアリアル":"airial",
+  "グリーンキャッツ":"greencats", "エンヤサール灘FC":"enyasal"
+};
 
 /* ---------- 小物 ---------- */
 const $ = id => document.getElementById(id);
@@ -102,7 +109,7 @@ function logo(club, cls){
   const me=isMe(club);
   const names= me ? [clubName(), DEFAULT_CLUB] : [club];
   /* 自分のクラブ：一番上の emblem.png → images/logo/クラブ名.png の順に探す */
-  const cands = me ? ["emblem.png", ...imgCands("logo",names), ...imgCands("",names).map(x=>x.replace(/^images\/\//,""))] : imgCands("logo",[club]);
+  const cands = me ? ["emblem.png", ...imgCands("logo",names), ...imgCands("",names).map(x=>x.replace(/^images\/\//,""))] : imgCands("logo",[LOGO_FILE[club], club]);
   return imgTag(cands, me?clubName():club, "logo "+(cls||""), "l:"+(me?"__me":nameKey(club)));
 }
 
@@ -213,6 +220,7 @@ async function loadAll(){
     m.ev.push({ i, min:half(F(o,"分")), mn:minN(F(o,"分")), side, kind:F(o,"種類")||"その他", player:nm(F(o,"選手")), rel:nm(F(o,"関連する選手")),
       note:F(o,"補足") }); });
   D.matches.forEach(m=>{
+    m.ev.forEach(e=>{ if(e.note==="ハーフタイム") e.mn=HALF+0.5; });
     m.ev.sort((a,b)=>a.mn-b.mn || a.i-b.i);
     if(!m.played) return;
     /* 得点者・アシストが空欄なら、出場選手 → 試合経過 の順で補う */
@@ -795,12 +803,13 @@ function tabTimeline(m,S){
   const ev=m.ev; let ht=false;
   const rows=[];
   ev.forEach(e=>{
-    if(!ht && e.mn>45.99 && ev.some(x=>x.mn<=45.99)){ rows.push(`<div class="tl-ht"><span>HALF TIME</span></div>`); ht=true; }
+    const isHT = e.note==="ハーフタイム";
+    if(!ht && (e.mn>=HALF+1 || isHT) && ev.some(x=>x.mn<HALF+1 && x.note!=="ハーフタイム")){ rows.push(`<div class="tl-ht"><span>HALF TIME</span></div>`); ht=true; }
     const isHome = (e.side===S.hSide);
     const who = e.side==="me" ? (e.player?pLink(e.player):"") : (e.player?`<b>${esc(e.player)}</b>`:"");
     const sub = e.kind==="交代" ? (e.rel?`<small>OUT ${esc(e.rel)}</small>`:"") : isGoal(e) ? `<small>${[e.body, e.rel?`アシスト ${esc(e.rel)}`:""].filter(Boolean).join("・")}</small>` : "";
-    const txt=`<span class="tl-k ${kcls(e.kind)}">${esc(e.kind)}</span>${who}${sub}${e.note?`<small>${esc(e.note)}</small>`:""}`;
-    rows.push(`<div class="tl-r"><div class="tl-e me">${isHome?txt:""}</div><div class="tl-m">${esc(e.min)}'</div><div class="tl-e">${isHome?"":txt}</div></div>`);
+    const txt=`<span class="tl-k ${kcls(e.kind)}">${esc(e.kind)}</span>${who}${sub}${e.note&&!isHT?`<small>${esc(e.note)}</small>`:""}`;
+    rows.push(`<div class="tl-r"><div class="tl-e me">${isHome?txt:""}</div><div class="tl-m">${isHT?"HT":esc(e.min)+"'"}</div><div class="tl-e">${isHome?"":txt}</div></div>`);
   });
   return `<div class="cmp-head"><div>${logo(S.home)} ${esc(S.home)}</div><div></div><div class="r">${esc(S.away)} ${logo(S.away)}</div></div><div class="tl">${rows.join("")}<div class="tl-ht"><span>FULL TIME</span></div></div>`;
 }
