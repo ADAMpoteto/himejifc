@@ -896,3 +896,10 @@ a.cmt-who:hover b{color:var(--red);}
 .in-ast .t{font-family:var(--en);font-weight:600;font-size:16px;}
 .in-ast select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid #cfcfcf;}
 @media(max-width:560px){ .in-ast label{grid-template-columns:44px 1fr;} .in-ast select{grid-column:1/-1;} }
+/* 順位表の見出し：大会名と「第○節終了時点」は行を分ける */
+.tbl-h small{display:block;margin:4px 0 0;}
+/* チーム歴（期間つき） */
+.clubs{list-style:none;margin:0;padding:0;}
+.clubs li{display:flex;gap:14px;padding:3px 0;}
+.clubs .term{flex:0 0 7.5em;color:var(--ink2);font-family:var(--en);font-variant-numeric:tabular-nums;}
+.clubs li.now .club{font-weight:800;}
