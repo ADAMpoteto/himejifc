@@ -11,7 +11,7 @@
    ■ 画像（GitHubの images フォルダに、名前と同じファイル名で置くだけ）
      選手の写真   : images/player/内海 友彰.png   （.webp / .jpg でもOK。スペースなしでもOK）
      クラブのロゴ : images/logo/香寺SC.png           （試合シートの「相手」と同じ名前）
-     自分のクラブ : images/logo/姫路FC.png
+     自分のクラブ : emblem.png（一番上に置く）
      画像がない選手・クラブは、頭文字で表示します。
    ===================================================================== */
 const SHEET_ID = "1wta1TuIpooEgHm5b3zjrCAZeq6hxFIC8fIxcj_B-Z4s";
@@ -19,8 +19,9 @@ const PUB_URL  = "";   // 例："https://docs.google.com/spreadsheets/d/e/2PACX-
 
 const SHEETS = {   // [シート名, gid]
   match:  ["試合",         0],
+  lineup: ["出場選手",     108],
+  events: ["試合経過",     109],
   player: ["選手",         102],
-  srec:   ["シーズン記録", 111],
   season: ["シーズン",     104],
   table:  ["順位表",       105],
   conf:   ["設定",         106]
@@ -100,7 +101,9 @@ const oppFace = (name, cls) => imgTag([], name, "face "+(cls||""), "o:"+nameKey(
 function logo(club, cls){
   const me=isMe(club);
   const names= me ? [clubName(), DEFAULT_CLUB] : [club];
-  return imgTag(imgCands("logo",names), me?clubName():club, "logo "+(cls||""), "l:"+(me?"__me":nameKey(club)));
+  /* 自分のクラブ：一番上の emblem.png → images/logo/クラブ名.png の順に探す */
+  const cands = me ? ["emblem.png", ...imgCands("logo",names), ...imgCands("",names).map(x=>x.replace(/^images\/\//,""))] : imgCands("logo",[club]);
+  return imgTag(cands, me?clubName():club, "logo "+(cls||""), "l:"+(me?"__me":nameKey(club)));
 }
 
 /* =====================================================================
@@ -168,12 +171,12 @@ async function loadAll(){
   const res=await Promise.allSettled(keys.map(k=>fetchCSV(sheetUrl(k))));
   const got={}; let fails=0;
   keys.forEach((k,i)=>{ if(res[i].status==="fulfilled") got[k]=res[i].value; else { got[k]=[]; fails++; console.error(SHEETS[k][0], res[i].reason); } });
-  ["lineup","events","trans","tstats"].forEach(k=>{ if(!got[k]) got[k]=[]; });
+  ["trans","tstats"].forEach(k=>{ if(!got[k]) got[k]=[]; });
   if(fails===keys.length) D.err="スプレッドシートを読み込めませんでした。スプシを「リンクを知っている全員（閲覧者）」に共有するか、「ウェブに公開」して app.js の PUB_URL にURLを入れてください。";
 
   got.conf.forEach(o=>{ const k=F(o,"項目"), v=F(o,"値"); if(k) D.conf[k]=v; });
   D.players=got.player.map(o=>({ name:F(o,"名前"), pos:F(o,"ポジション").toUpperCase(), nat:F(o,"出身")||F(o,"国籍"), no:num(F(o,"背番号")), birth:pDate(F(o,"生年月日")), birthS:F(o,"生年月日"),
-    foot:F(o,"利き足"), height:num(F(o,"身長")), memo:F(o,"メモ"), photo:F(o,"写真") })).filter(p=>p.name);
+    foot:F(o,"利き足"), height:num(F(o,"身長")), memo:F(o,"メモ"), photo:F(o,"写真"), prev:F(o,"前所属") })).filter(p=>p.name);
   /* 出場選手（名前合わせに使うので先に） */
   D.lineups=got.lineup.map((o,i)=>{ const side=sideOf(F(o,"チーム")); const raw=F(o,"名前");
     const s={}; P_NUM.forEach(h=>{ const v=num(F(o,h)); if(v!=null) s[h]=v; });
@@ -426,6 +429,8 @@ function buildNews(){
   });
   D.seasons.forEach(S=>{
     const L=ofSeason(S.season); const last=L.length? L[L.length-1].date : null;
+    if(D.matches.some(m=>m.season===S.season && !m.played)) return;
+    if(!L.length && !S.rank) return;
     const t=titlesOf(S);
     N.push({ id:"s"+S.season, cat:"SEASON", date:null, sort:last? new Date(last.getTime()+86400000) : null, S,
       title: t.length ? `${S.season}シーズン ${t.join("・")}！` : `${S.season}シーズンを終えて${S.rank?`（${S.league||"リーグ"} ${S.rank}位）`:""}` });
@@ -647,7 +652,7 @@ const MS = [
     ["ブロック"],["クリア"],["オフェンスデュエル勝利"],["ディフェンスデュエル勝利"],["空中戦勝利"],["突破された回数","",0,1],["PK献上","",0,1]]]
 ];
 const msVal = (m,side,it) => it[4] ? it[4](m,side) : teamVal(m,side,it[0]);
-const hasStats = m => teamVal(m,"me","ボール支配率")!=null || MS.some(([,L])=>L.some(it=>msVal(m,"me",it)!=null||msVal(m,"opp",it)!=null));
+const hasStats = m => Object.keys(m.ts||{}).length>0;   /* チームスタッツの記録がある試合だけ */
 
 function vMatchDetail(arg){
   const [id, tab]=String(arg).split("/");
@@ -762,7 +767,7 @@ const LU_GRP = [
 ];
 function tabLineup(m,S){
   const col = side => { const L=m.lu[side], club= side==="me"?clubName():m.opp, form=m.form[side];
-    if(!L.length) return `<div><div class="lu-h">${logo(club)}<span>${esc(club)}</span></div>${empty("出場選手シートに入れると表示されます。")}</div>`;
+    if(!L.length) return `<div><div class="lu-h">${logo(club)}<span>${esc(club)}</span></div>${empty(side==="me"?"出場選手シートに入れると表示されます。":"相手チームの出場選手は記録していません。")}</div>`;
     const subs=L.filter(l=>l.role==="途中出場"), bench=L.filter(l=>l.role==="ベンチ");
     const nm=l=> side==="me"?`<a href="#player/${encodeURIComponent(l.name)}">${esc(l.name)}</a>`:esc(l.name);
     const offFor = l => { const e=m.ev.find(e=>e.side===side&&e.kind==="交代"&&same(e.player,l.name)); return e ? `${esc(e.min)}' OUT ${esc(e.rel)}` : (l.min!=null?`${l.min}分`:""); };
@@ -804,7 +809,10 @@ function tabTimeline(m,S){
 function squad(s){
   let rows=seasonRows(s).map(r=>({...r, prof:profile(r.name)}));
   /* 選手シートにいて、まだ出場していない選手も並べる */
-  D.players.forEach(p=>{ if(!rows.some(r=>same(r.name,p.name)) && !D.trans.some(t=>same(t.name,p.name)&&trDir(t.kind)==="out"&&(!s||t.season<=s))) rows.push({name:p.name,pos:p.pos,no:null,prof:p,apps:0}); });
+  const latest = !s || s===D.seasonList[0];
+  D.players.forEach(p=>{ if(latest && p.no!=null && !rows.some(r=>same(r.name,p.name)) && !D.trans.some(t=>same(t.name,p.name)&&trDir(t.kind)==="out"&&(!s||t.season<=s))) rows.push({name:p.name,pos:p.pos,no:p.no,prof:p,apps:0}); });
+  /* 最新シーズンは背番号を登録名簿に合わせる */
+  if(latest) rows.forEach(r=>{ if(r.prof && r.prof.no!=null) r.no=r.prof.no; });
   return {rows, note:""};
 }
 function vPlayers(){
@@ -830,7 +838,7 @@ function vPlayerDetail(name){
   if(!P && !L.length && !mg.length && !T.length && !log.length) return `${band("PLAYERS","選手")}<div class="wrap">${empty("選手が見つかりません。")}</div>`;
   const pos=(P&&P.pos)||(last&&last.pos)||"";
   const prof=[["出身",P&&P.nat],["生年月日",P&&P.birth?`${fmtD(P.birth)}（${ageAt(P.birth,ST.season||D.seasonList[0])}歳）`:P&&P.birthS],
-    ["利き足",P&&P.foot],["身長",P&&P.height?`${P.height}cm`:""]].filter(([,v])=>v!=null&&v!=="");
+    ["利き足",P&&P.foot],["身長",P&&P.height?`${P.height}cm`:""],["前所属",P&&P.prev]].filter(([,v])=>v!=null&&v!=="");
   /* 表示するシーズン（通算も選べる） */
   const seasons=L.map(r=>r.season);
   const ps = ST.pSeason!=null && (ST.pSeason==="" || seasons.includes(ST.pSeason)) ? ST.pSeason : (last?last.season:"");
@@ -985,7 +993,7 @@ function vHistory(){
   const ts=ST.tblSeason && tSeasons.includes(ST.tblSeason) ? ST.tblSeason : tSeasons[0];
   const comps=[...new Set(D.table.filter(r=>r.season===ts).map(r=>r.comp))];
   const info=[["クラブ名",clubName()],["代表",D.conf["代表者"]],["所属リーグ",D.conf["所属リーグ"]],["活動場所",D.conf["活動場所"]],["練習",D.conf["練習"]],
-    ["ホームグラウンド",D.conf["ホームスタジアム"]],["監督",D.conf["監督名"]],["メンバー",D.conf["メンバー"]],["最初のシーズン",D.conf["最初のシーズン"]]].filter(([,v])=>v);
+    ["ホームグラウンド",D.conf["ホームスタジアム"]],["監督",D.conf["監督名"]],["コーチ",D.conf["コーチ"]],["ユニフォーム",D.conf["ユニフォーム"]],["メンバー",D.conf["メンバー"]],["最初のシーズン",D.conf["最初のシーズン"]]].filter(([,v])=>v);
   const cupCols=[["市民大会","cup"],["播州大会","lcup"],["その他の大会","intl"]].filter(([,k])=>D.seasons.some(S=>S[k]));
   const cupTh=cupCols.map(([k])=>`<th>${k}</th>`).join("");
   const hasCap=D.seasons.some(S=>S.cap);
