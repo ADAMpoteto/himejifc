@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>姫路FC 公式サイト</title>
+<meta name="apple-mobile-web-app-title" content="姫路FC">
+<meta name="theme-color" content="#1c0d10">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,700;1,800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20261029b">
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+
+<header class="hd" id="hd">
+  <div class="hd-in">
+    <a class="hd-brand" href="#home" aria-label="ホーム">
+      <img src="images/logo/姫路FC.png" alt="" width="46" height="46">
+      <span class="hd-name"><b id="hd-name">姫路FC</b><small>HIMEJI FOOTBALL CLUB</small></span>
+    </a>
+    <nav class="hd-nav" aria-label="メニュー">
+      <a href="#news" data-nav="news"><b>NEWS</b><small>ニュース</small></a>
+      <a href="#match" data-nav="match"><b>MATCH</b><small>試合</small></a>
+      <a href="#players" data-nav="players"><b>PLAYERS</b><small>選手</small></a>
+      <a href="#stats" data-nav="stats"><b>STATS</b><small>記録</small></a>
+      <a href="#history" data-nav="history"><b>CLUB</b><small>クラブ</small></a>
+    </nav>
+    <button class="hd-menu" id="menu-btn" aria-label="メニューを開く" aria-expanded="false" aria-controls="drawer"><i></i><i></i><i></i><span>MENU</span></button>
+  </div>
+</header>
+
+<div class="drawer" id="drawer" hidden>
+  <nav class="drawer-nav" aria-label="メニュー">
+    <a href="#home"><b>HOME</b><small>ホーム</small></a>
+    <a href="#news"><b>NEWS</b><small>ニュース</small></a>
+    <a href="#match"><b>MATCH</b><small>試合日程・結果</small></a>
+    <a href="#players"><b>PLAYERS</b><small>選手一覧</small></a>
+    <a href="#stats"><b>STATS</b><small>記録・ランキング</small></a>
+    <a href="#history"><b>CLUB</b><small>クラブ・歴史・順位表</small></a>
+  </nav>
+  <div class="drawer-sns" id="drawer-sns"></div>
+</div>
+
+<main id="view"><div class="wrap"><div class="loading">読み込み中…</div></div></main>
+
+<footer class="ft">
+  <div class="ft-in">
+    <div class="ft-brand"><img src="images/logo/姫路FC.png" alt="" width="64" height="64"><b id="ft-club">姫路FC</b></div>
+    <nav class="ft-map">
+      <a href="#news">NEWS</a><a href="#match">MATCH</a><a href="#players">PLAYERS</a><a href="#stats">STATS</a><a href="#history">CLUB</a>
+    </nav>
+    <div class="ft-sns" id="ft-sns"></div>
+    <p class="ft-copy">© <span id="ft-year">2026</span> <span id="ft-name">姫路FC</span>. All Rights Reserved.</p>
+  </div>
+</footer>
+
+<script src="app.js?v=20261029b"></script>
+</body>
+</html>
