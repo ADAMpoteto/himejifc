@@ -1,18 +1,9 @@
 /* =====================================================================
-   姫路FC ― 公式サイト（姫路市社会人サッカーリーグ）
-   データはGoogleスプレッドシートから読み込みます。
-
-   ■ つなぎ方（どちらか1つ）
-     A. スプシを「共有 → リンクを知っている全員（閲覧者）」にする
-        → SHEET_ID にスプシのID（URLの /d/ と /edit の間）を入れるだけ（入れてあります）
-     B. スプシを「ファイル → 共有 → ウェブに公開（ドキュメント全体）」する
-        → 公開したときのURLを PUB_URL に貼る（こちらのほうが読み込みが安定します）
-
-   ■ 画像（GitHubの images フォルダに、名前と同じファイル名で置くだけ）
-     選手の写真   : images/player/内海 友彰.png   （.webp / .jpg でもOK。スペースなしでもOK）
-     クラブのロゴ : images/logo/香寺SC.png           （試合シートの「相手」と同じ名前）
-     自分のクラブ : emblem.png（一番上に置く）
-     画像がない選手・クラブは、頭文字で表示します。
+   姫路FC 公式サイト
+   データはGoogleスプレッドシート（SHEET_ID）から読み込みます。
+   スプシは「共有 → リンクを知っている全員（閲覧者）」にしておく。
+   読み込みが不安定なときは「ファイル → 共有 → ウェブに公開」したURLを PUB_URL に貼る。
+   使い方は README.md と、スプシの「説明」シートを参照。
    ===================================================================== */
 const SHEET_ID = "1wta1TuIpooEgHm5b3zjrCAZeq6hxFIC8fIxcj_B-Z4s";
 const PUB_URL  = "";   // 例："https://docs.google.com/spreadsheets/d/e/2PACX-…/pubhtml"
@@ -36,12 +27,6 @@ const SHEETS = {   // [シート名, gid]
 const DEFAULT_CLUB = "姫路FC";
 const HALF = 35;   /* 前半の時間（分）。姫路市2部リーグは35分ハーフ */
 const IMG_EXT = ["jpg", "png", "webp", "jpeg"];
-/* 相手エンブレムのファイル名（英数字）。日本語のファイル名はzip解凍で文字化けすることがあるため */
-const LOGO_FILE = {
-  "FCヴィエンティス白鳥":"vientis", "FCVOLTS":"volts", "TOPBOY":"topboy", "香寺SC":"kohdera",
-  "FCリザーブ":"reserve", "FCWINDS":"winds", "MEGERE":"megere", "エアリアル":"airial",
-  "グリーンキャッツ":"greencats", "エンヤサール灘FC":"enyasal"
-};
 
 /* ---------- 小物 ---------- */
 const $ = id => document.getElementById(id);
@@ -113,17 +98,15 @@ window.imgNext = el => {
   el.replaceWith(d);
 };
 function face(name, cls){
-  const n=fullName(name), p=D.players.find(x=>same(x.name,n)), ph=p&&p.photo ? String(p.photo).trim() : "";
-  /* 写真の欄にファイル名（拡張子つきでも、なしでも）を書けばそれを使う */
-  const byId = p&&p.id ? imgCands("player",[p.id]) : [];
-  const c = (ph ? (/\.(png|webp|jpe?g|gif)$/i.test(ph) ? [`images/player/${ph}`] : imgCands("player",[ph])) : []).concat(byId, imgCands("player",[n]));
+  /* 写真は images/player/ に「ID.jpg」（png / webp も可） */
+  const n=fullName(name), p=D.players.find(x=>same(x.name,n));
+  const c = p&&p.id ? imgCands("player",[p.id]) : [];
   return imgTag(c, n, "face "+(cls||""), "p:"+nameKey(n));
 }
-const oppFace = (name, cls) => imgTag([], name, "face "+(cls||""), "o:"+nameKey(name));
 function teamLogoCands(club){
   const t=teamOf(club), f=t&&t.logo ? t.logo.trim() : "";
   const first = !f ? [] : /^https?:\/\//.test(f) ? [f] : /\.(png|jpe?g|webp|svg|gif)$/i.test(f) ? [`images/logo/${f}`] : imgCands("logo",[f]);
-  return [...first, ...imgCands("logo",[LOGO_FILE[club], t&&t.name, club])];
+  return [...first, ...imgCands("logo",[t&&t.name, club])];
 }
 function logo(club, cls){
   const me=isMe(club);
@@ -136,7 +119,7 @@ function logo(club, cls){
 /* =====================================================================
    データ
    ===================================================================== */
-const D = { teams:[], past:[], posts:[], notices:[], hist:[], sponsors:[], srec:[], matches:[], played:[], stats:[], players:[], trans:[], seasons:[], table:[], lineups:[], conf:{}, seasonList:[], news:[], loaded:false, err:"" };
+const D = { teams:[], past:[], posts:[], notices:[], hist:[], sponsors:[], matches:[], played:[], stats:[], players:[], trans:[], seasons:[], table:[], lineups:[], conf:{}, seasonList:[], news:[], loaded:false, err:"" };
 const ST = { pSeason:null, luGrp:"概要", season:null, stSeason:"", trSeason:"", comp:"すべて", newsCat:"すべて", rk:"g", tblSeason:null, tblComp:null, mtab:"sum", luSide:"me" };
 
 const clubName = () => D.conf["クラブ名"] || DEFAULT_CLUB;
@@ -209,7 +192,7 @@ function placeByPos(st){
 const GROUPS = [["GK","GOALKEEPER","ゴールキーパー"],["DF","DEFENDER","ディフェンダー"],["MF","MIDFIELDER","ミッドフィルダー"],["FW","FORWARD","フォワード"],["OT","MEMBERS","メンバー"]];
 
 /* ---------- 選手・チームの記録の項目（スプシの列名＝ここの名前） ---------- */
-const P_NUM = ["出場時間", "評価", "得点", "アシスト", "シュート", "パス", "ドリブル", "タックル", "オフサイド", "ファウル", "ボール奪取", "ボールロスト", "走行距離", "スプリント距離", "ボール保持率", "ドリブル成功", "ドリブル距離", "タックルされた回数", "獲得CK", "被ファウル", "獲得PK", "ダミーからのアシスト", "通常ドリブル率", "シールドドリブル率", "ストレイフドリブル率", "アジャイルドリブル率", "ドリブルでFWライン突破（間）試み", "ドリブルでFWライン突破（間）成功", "ドリブルでFWライン突破（外）試み", "ドリブルでFWライン突破（外）成功", "ドリブルでMFライン突破（間）試み", "ドリブルでMFライン突破（間）成功", "ドリブルでMFライン突破（外）試み", "ドリブルでMFライン突破（外）成功", "ドリブルでDFライン突破（間）試み", "ドリブルでDFライン突破（間）成功", "ドリブルでDFライン突破（外）試み", "ドリブルでDFライン突破（外）成功", "抜き去り", "スキルムーブで抜き去り", "股抜き", "縦への突破", "PKを除くゴール", "PKを除くゴール期待値", "枠内シュート", "枠外シュート", "ブロックされたシュート", "FKゴール", "PKゴール", "PK戦ゴール", "シュートからのアシスト", "通常シュート", "フィネスシュート", "ヘディングシュート", "パワーシュート", "ボレーシュート", "チップシュート", "セットプレーのシュート", "期待アシスト", "セカンドアシスト", "キーパス", "パスで抜いた人数", "パス成功", "パスカットされた", "オフサイドのパス", "クロス", "クロス成功", "ブロックされたクロス", "プレッシャー下のパス", "プレッシャー下のパス成功", "グラウンダーパス", "ロブパス", "スルーパス", "ロブスルーパス", "セットプレーのパス", "パスでFWライン突破（間）試み", "パスでFWライン突破（間）成功", "パスでFWライン突破（外）試み", "パスでFWライン突破（外）成功", "パスでFWライン突破（上）試み", "パスでFWライン突破（上）成功", "パスでMFライン突破（間）試み", "パスでMFライン突破（間）成功", "パスでMFライン突破（外）試み", "パスでMFライン突破（外）成功", "パスでMFライン突破（上）試み", "パスでMFライン突破（上）成功", "パスでDFライン突破（間）試み", "パスでDFライン突破（間）成功", "スタンディングタックル", "スタンディングタックル成功", "スライディングタックル", "スライディングタックル成功", "インターセプト", "ブロック", "クリア", "オフサイド誘発", "オフェンスデュエル", "オフェンスデュエル勝利", "ディフェンスデュエル", "ディフェンスデュエル勝利", "空中戦", "空中戦勝利", "突破された回数", "守備エリアで突破された回数", "ボックス内で突破された回数", "PK献上", "オウンゴール", "警告", "退場", "被シュート", "被枠内シュート", "セーブ", "失点", "パンチング", "飛び出してのセーブ", "PKセーブ", "PK失点", "PK戦セーブ", "PK戦失点", "通常シュートをセーブ", "フィネスシュートをセーブ", "ヘディングをセーブ", "パワーシュートをセーブ", "ボレーをセーブ", "チップをセーブ", "セットプレーをセーブ"];
+const P_NUM = ["出場時間", "評価", "得点", "アシスト", "シュート", "パス", "ドリブル", "タックル", "オフサイド", "ファウル", "ボール奪取", "ボールロスト", "走行距離", "スプリント距離", "ボール保持率", "ドリブル成功", "ドリブル距離", "タックルされた回数", "獲得CK", "被ファウル", "獲得PK", "通常ドリブル率", "シールドドリブル率", "ストレイフドリブル率", "アジャイルドリブル率", "ドリブルでFWライン突破（間）試み", "ドリブルでFWライン突破（間）成功", "ドリブルでFWライン突破（外）試み", "ドリブルでFWライン突破（外）成功", "ドリブルでMFライン突破（間）試み", "ドリブルでMFライン突破（間）成功", "ドリブルでMFライン突破（外）試み", "ドリブルでMFライン突破（外）成功", "ドリブルでDFライン突破（間）試み", "ドリブルでDFライン突破（間）成功", "ドリブルでDFライン突破（外）試み", "ドリブルでDFライン突破（外）成功", "抜き去り", "スキルムーブで抜き去り", "股抜き", "縦への突破", "PKを除くゴール", "PKを除くゴール期待値", "枠内シュート", "枠外シュート", "ブロックされたシュート", "FKゴール", "PKゴール", "PK戦ゴール", "シュートからのアシスト", "通常シュート", "フィネスシュート", "ヘディングシュート", "パワーシュート", "ボレーシュート", "チップシュート", "セットプレーのシュート", "期待アシスト", "セカンドアシスト", "キーパス", "パスで抜いた人数", "パス成功", "パスカットされた", "オフサイドのパス", "クロス", "クロス成功", "ブロックされたクロス", "プレッシャー下のパス", "プレッシャー下のパス成功", "グラウンダーパス", "ロブパス", "スルーパス", "ロブスルーパス", "セットプレーのパス", "パスでFWライン突破（間）試み", "パスでFWライン突破（間）成功", "パスでFWライン突破（外）試み", "パスでFWライン突破（外）成功", "パスでFWライン突破（上）試み", "パスでFWライン突破（上）成功", "パスでMFライン突破（間）試み", "パスでMFライン突破（間）成功", "パスでMFライン突破（外）試み", "パスでMFライン突破（外）成功", "パスでMFライン突破（上）試み", "パスでMFライン突破（上）成功", "パスでDFライン突破（間）試み", "パスでDFライン突破（間）成功", "スタンディングタックル", "スタンディングタックル成功", "スライディングタックル", "スライディングタックル成功", "インターセプト", "ブロック", "クリア", "オフサイド誘発", "オフェンスデュエル", "オフェンスデュエル勝利", "ディフェンスデュエル", "ディフェンスデュエル勝利", "空中戦", "空中戦勝利", "突破された回数", "守備エリアで突破された回数", "ボックス内で突破された回数", "PK献上", "オウンゴール", "警告", "退場", "被シュート", "被枠内シュート", "セーブ", "失点", "パンチング", "飛び出してのセーブ", "PKセーブ", "PK失点", "PK戦セーブ", "PK戦失点", "通常シュートをセーブ", "フィネスシュートをセーブ", "ヘディングをセーブ", "パワーシュートをセーブ", "ボレーをセーブ", "チップをセーブ", "セットプレーをセーブ"];
 const T_NUM = ["ボール支配率", "ボール奪取時間", "シュート", "ゴール期待値", "パス", "タックル", "タックル成功", "インターセプト", "セーブ", "ファウル", "オフサイド", "コーナーキック", "フリーキック", "PK", "警告", "退場", "守備ライン突破（間）", "守備ライン突破（外）", "守備ライン突破（上）", "守備ライン突破の試み", "枠内シュート", "枠外シュート", "ブロックされたシュート", "通常シュート", "フィネスシュート", "ヘディングシュート", "パワーシュート", "ボレーシュート", "チップシュート", "セットプレーのシュート", "ボックス内シュート", "ボックス外シュート", "ニアサイドへのシュート", "ファーサイドへのシュート", "パス成功", "パスカットされた", "オフサイドのパス", "その他のパス", "グラウンダーパス", "ロブパス", "スルーパス", "ロブスルーパス", "クロス", "セットプレーのパス", "キーパス", "ダイレクトパス", "パス&ゴー", "サイドを使ったパス", "ブレイクアウェイのパス", "スタンディングタックル", "スタンディングタックル成功", "スライディングタックル", "スライディングタックル成功", "ブロック", "クリア", "オフェンスデュエル勝利", "ディフェンスデュエル勝利", "空中戦勝利", "突破された回数", "PK献上"];
 const MAX_KEYS = {};                              /* 合計ではなく最大値を取る項目 */
 const AVG_KEYS = {"評価":1,"ボール保持率":1,"通常ドリブル率":1,"シールドドリブル率":1,"ストレイフドリブル率":1,"アジャイルドリブル率":1};  /* 平均を取る項目 */
@@ -235,7 +218,7 @@ async function loadAll(){
   D.sponsors=(got.spon||[]).map(o=>({ kind:F(o,"区分"), name:F(o,"名前"), price:F(o,"金額"), body:F(o,"内容"), url:F(o,"URL"), logo:F(o,"ロゴ") }))
     .filter(x=>x.name && /^(プラン|パートナー|スポンサー)$/.test(x.kind));
   D.players=got.player.map(o=>({ name:F(o,"名前"), pos:F(o,"ポジション").toUpperCase(), nat:F(o,"出身")||F(o,"国籍"), no:num(F(o,"背番号")), birth:pDate(F(o,"生年月日")), birthS:F(o,"生年月日"),
-    foot:F(o,"利き足"), height:num(F(o,"身長")), memo:F(o,"メモ"), photo:F(o,"写真"), prev:F(o,"前所属"), joinY:half(F(o,"加入年")).replace(/[^0-9]/g,"").slice(0,4),
+    foot:F(o,"利き足"), height:num(F(o,"身長")), memo:F(o,"メモ"), prev:F(o,"前所属"), joinY:half(F(o,"加入年")).replace(/[^0-9]/g,"").slice(0,4),
     roles:F(o,"役職").split(/[・、,，\/／\s]+/).map(x=>x.trim()).filter(Boolean),
     kana:F(o,"フリガナ"), en:F(o,"英語名"), id:F(o,"ID").toLowerCase().replace(/[^a-z0-9-]/g,""),
     first:{ app:F(o,"初出場"), goal:F(o,"初得点"), ast:F(o,"初アシスト") } })).filter(p=>p.name);
@@ -298,17 +281,14 @@ async function loadAll(){
   D.posts=(got.posts||[]).map(o=>({ date:pDate(F(o,"日付")), url:Object.values(o).map(v=>String(v||"").trim()).find(v=>/^https?:\/\/(www\.)?(instagram\.com|x\.com|twitter\.com)\//.test(v))||"" }))
     .filter(x=>x.url).sort((a,b)=>(b.date||0)-(a.date||0));
 
-  /* シーズン記録（試合ごとの記録がないシーズンの、選手ごとの出場・得点） */
-  D.srec=(got.srec||[]).map(o=>({ season:F(o,"シーズン"), name:fullName(F(o,"名前")), no:num(F(o,"背番号")), apps:num(F(o,"出場")),
-    g:num(F(o,"得点"))||0, a:num(F(o,"アシスト")), pos:F(o,"ポジション").toUpperCase() })).filter(r=>r.season && r.name);
   D.trans=got.trans.map((o,i)=>({ i, season:F(o,"シーズン"), date:pDate(F(o,"日付")), kind:F(o,"区分")||"加入", name:fullName(F(o,"名前")),
     club:F(o,"前所属・移籍先")||F(o,"相手クラブ"), fee:num(F(o,"移籍金")), memo:F(o,"メモ"), ex:isEx(o) })).filter(t=>t.name && !t.ex);
   D.trans.forEach(t=>{ if(!t.season && t.date) t.season=String(t.date.getMonth()<3 ? t.date.getFullYear()-1 : t.date.getFullYear()); });
   /* お知らせ（自由に書けるニュース） */
   D.notices=got.notice.map((o,i)=>({ i, date:pDate(F(o,"日付")), catJP:F(o,"カテゴリ")||"お知らせ", title:F(o,"タイトル"), body:F(o,"本文"), img:F(o,"画像"), link:F(o,"リンク"), ex:isEx(o) }))
     .filter(n=>n.title && !n.ex).map(n=>({...n, cat:NOTICE_CAT[n.catJP]||"NOTICE"}));
-  D.seasons=got.season.map(o=>({ season:F(o,"シーズン"), league:F(o,"リーグ"), rank:half(F(o,"リーグ順位")).replace(/位$/,""), cup:F(o,"市民大会"),
-    lcup:F(o,"播州大会"), intl:F(o,"その他の大会"), cups:F(o,"カップ戦"), cap:fullName(F(o,"主将")), comment:F(o,"一言"),
+  D.seasons=got.season.map(o=>({ season:F(o,"シーズン"), league:F(o,"リーグ"), rank:half(F(o,"リーグ順位")).replace(/位$/,""), 
+    cups:F(o,"カップ戦"), comment:F(o,"一言"),
     rec:["勝","分","負","得点","失点"].map(k=>num(F(o,k))) })).filter(s=>s.season);
   D.hist=(got.hist||[]).map(o=>({ y:half(F(o,"年")), t:F(o,"出来事") })).filter(h=>/^\d{4}/.test(h.y) && h.t);
   D.table=got.table.map(o=>({ season:F(o,"シーズン"), comp:F(o,"大会"), rank:num(F(o,"順位")), club:F(o,"クラブ"), p:num(F(o,"試合")),
@@ -370,22 +350,7 @@ function fromMatches(s){
   return Object.values(M).map(o=>({...o, g:o.得点, a:o.アシスト}));
 }
 /* 出場選手シートから、選手のシーズン成績（合計）を作る。s=""なら通算 */
-function srecRows(s){
-  return D.srec.filter(r=>r.season===s).map(r=>({ name:r.name, season:s, apps:r.apps, starts:0, cs:0, mom:0, pos:r.pos||"", no:r.no, _n:{}, src:"srec",
-    "得点":r.g, "アシスト":r.a, g:r.g, a:r.a, yc:0, rc:0, min:null }));
-}
-function luAgg(s){
-  if(!s && !D.srec.length) return luAggRaw("");
-  if(s){ const L=luAggRaw(s), have=new Set(L.map(r=>nameKey(r.name))); return L.concat(srecRows(s).filter(r=>!have.has(nameKey(r.name)))); }
-  /* 通算：シーズンごとの成績を足す */
-  const M={};
-  D.seasonList.forEach(se=>luAgg(se).forEach(r=>{ const k=nameKey(r.name);
-    const o=M[k]=M[k]||{name:r.name,season:"",apps:null,starts:0,cs:0,mom:0,pos:"",no:null,_n:{},g:0,a:null,"得点":0,"アシスト":null,yc:0,rc:0,min:null};
-    if(r.apps!=null) o.apps=(o.apps||0)+r.apps; o.starts+=r.starts||0; o.cs+=r.cs||0; o.mom+=r.mom||0;
-    o.g+=r.g||0; if(r.a!=null) o._a=(o._a||0)+r.a; o.a=o._a??null; o["得点"]=o.g; o["アシスト"]=o.a; o.yc+=r.yc||0; o.rc+=r.rc||0; if(r.min!=null) o.min=(o.min||0)+r.min;
-    if(r.pos) o.pos=r.pos; if(r.no!=null) o.no=r.no; }));
-  return Object.values(M);
-}
+const luAgg = s => luAggRaw(s);   /* s が空なら通算 */
 function luAggRaw(s){
   const M={};
   D.lineups.filter(l=>l.side==="me" && l.m && l.m.played && (!s || l.m.season===s) && (l.role!=="ベンチ" || l.min)).forEach(l=>{
@@ -412,15 +377,13 @@ const profile = name => D.players.find(p=>same(p.name,name)) || null;
 const PLAYER_ROLES = ["主将","副主将","キャプテン","副キャプテン"];
 const CLUB_ROLES = ["代表","副代表"];  /* クラブの役職。スタッフ（現場）には入れない */
 const ROLE_ORDER = ["監督","ヘッドコーチ","コーチ","GKコーチ","トレーナー","マネージャー"];
-function rolesOf(name){ const P=profile(name), R=[...((P&&P.roles)||[])], c=D.conf;
-  if(same(c["代表者"],name) && !R.includes("代表")) R.push("代表"); if(same(c["監督名"],name) && !R.includes("監督")) R.push("監督");
-  if(String(c["コーチ"]||"").split(/[、,，]/).some(x=>same(x.trim(),name)) && !R.includes("コーチ")) R.push("コーチ"); return R; }
+const rolesOf = name => { const P=profile(name); return [...((P&&P.roles)||[])]; };
 const staffRolesOf = name => rolesOf(name).filter(r=>!PLAYER_ROLES.includes(r)&&!CLUB_ROLES.includes(r));
-const clubRoleHolder = role => { const P=D.players.find(p=>rolesOf(p.name).includes(role)); return P?P.name:(role==="代表"?String(D.conf["代表者"]||D.conf["代表"]||"").trim():""); };
+const clubRoleHolder = role => { const P=D.players.find(p=>rolesOf(p.name).includes(role)); return P?P.name:""; };
 const roleRank = r => { const i=ROLE_ORDER.indexOf(r); return i<0?50:i; };
 /* スタッフ一覧（役職がある人。主将などは選手の役割なので除く） */
 function staffList(){
-  const names=[...new Set([...D.players.map(p=>p.name), ...[D.conf["代表者"],D.conf["監督名"],...String(D.conf["コーチ"]||"").split(/[、,，]/)].map(x=>String(x||"").trim()).filter(Boolean)])];
+  const names=D.players.map(p=>p.name);
   return names.map(n=>({ name:n, roles:staffRolesOf(n), P:profile(n) })).filter(x=>x.roles.length)
     .sort((a,b)=>roleRank(a.roles[0])-roleRank(b.roles[0]) || a.name.localeCompare(b.name,"ja"));
 }
@@ -431,7 +394,7 @@ function pid(name){ const n=fullName(name), P=profile(n); return (P&&P.id) || "p
 function nameFromPid(id){
   id=String(id||"").toLowerCase();
   const P=D.players.find(p=>p.id && p.id===id); if(P) return P.name;
-  const pool=[...D.players.map(p=>p.name), ...D.lineups.filter(l=>l.side==="me").map(l=>l.name), ...D.srec.map(r=>r.name), ...D.trans.map(t=>t.name)];
+  const pool=[...D.players.map(p=>p.name), ...D.lineups.filter(l=>l.side==="me").map(l=>l.name), ...D.trans.map(t=>t.name)];
   const hit=pool.find(n=>"p-"+hash36(nameKey(n))===id);
   return hit || fullName(decodeURIComponent(id));   /* 古い（日本語の）URLもそのまま開けるように */
 }
@@ -449,7 +412,6 @@ function topOf(s, k){
 
 /* ---------- 選手の指標 ----------
    [名前, 合計から値を出す式, 単位, 小数の桁, 1試合平均も出す, ランキングに載る条件] */
-const per = (T,h) => T.apps ? (T[h]||0)/T.apps : null;
 const mean = (T,h) => (T._n && T._n[h]) ? T[h]/T._n[h] : null;   /* 評価・割合は平均 */
 const sumOf = (T,L) => L.some(h=>T[h]!=null) ? L.reduce((a,h)=>a+(T[h]||0),0) : null;
 const tkl = T => T["タックル"]!=null ? T["タックル"] : sumOf(T,["スタンディングタックル","スライディングタックル"]);
@@ -473,7 +435,6 @@ const PM = [
   ["ポゼッション", [
     ["ボール保持率", T=>mean(T,"ボール保持率"), "%", 1], ["ドリブル成功", T=>T["ドリブル成功"], "回", 0, 1], ["ドリブル距離", T=>T["ドリブル距離"], "km", 2, 1],
     ["タックルされた回数", T=>T["タックルされた回数"], "回"], ["獲得CK", T=>T["獲得CK"], "本"], ["被ファウル", T=>T["被ファウル"], "回"], ["獲得PK", T=>T["獲得PK"], "回"],
-    ["ダミーからのアシスト", T=>T["ダミーからのアシスト"], ""],
     ["通常ドリブル率", T=>mean(T,"通常ドリブル率"), "%", 1], ["シールドドリブル率", T=>mean(T,"シールドドリブル率"), "%", 1],
     ["ストレイフドリブル率", T=>mean(T,"ストレイフドリブル率"), "%", 1], ["アジャイルドリブル率", T=>mean(T,"アジャイルドリブル率"), "%", 1],
     ["抜き去り", T=>T["抜き去り"], "回", 0, 1], ["スキルムーブで抜き去り", T=>T["スキルムーブで抜き去り"], "回"], ["股抜き", T=>T["股抜き"], "回"], ["縦への突破", T=>T["縦への突破"], "回"],
@@ -559,7 +520,6 @@ function buildNews(){
 }
 function titlesOf(S){
   const t=[]; if(/^1$/.test(S.rank)) t.push(`${S.league||"リーグ"}優勝`);
-  [["市民大会",S.cup],["播州大会",S.lcup],["その他の大会",S.intl]].forEach(([k,v])=>{ if(/^優勝/.test(v||"")) t.push(`${k}優勝`); });
   String(S.cups||"").split(/[／\/、\n]/).forEach(x=>{ const m=x.trim().match(/^(.+?)\s*優勝$/); if(m) t.push(`${m[1]}優勝`); });
   return t;
 }
@@ -590,10 +550,6 @@ function visual(n){
 }
 const nDate = n => n.date ? fmtD(n.date).replace(/\//g,".") : n.nm ? fmtD(n.nm.date).replace(/\//g,".") : esc((n.S&&n.S.season)||"");
 const newsLine = n => `<a class="nl" href="${n.nm?`#match/${n.nm.id}`:`#news/${encodeURIComponent(n.id)}`}"><time>${nDate(n)}</time><span class="cat ${n.cat}">${esc(n.catLabel||CAT_JP[n.cat]||n.cat)}</span><p>${esc(n.title)}</p></a>`;
-const newsCard = n => `<a class="ncard" href="#news/${encodeURIComponent(n.id)}"><div class="thumb">${visual(n)}</div>
-  <div class="meta"><span class="cat ${n.cat}">${n.cat}</span><span>${nDate(n)}</span></div><h3>${esc(n.title)}</h3></a>`;
-const newsRow = n => `<a class="nrow" href="#news/${encodeURIComponent(n.id)}"><div class="thumb">${visual(n)}</div>
-  <div><div class="meta"><span class="cat ${n.cat}">${n.cat}</span><span>${nDate(n)}</span></div><h3>${esc(n.title)}</h3></div></a>`;
 const pLink = n => `<a href="#player/${pid(n)}"><b>${esc(n)}</b></a>`;
 function newsBody(n){
   const P=[];
@@ -628,7 +584,7 @@ function newsBody(n){
     if(dir!=="out") P.push(`<div class="nd-link"><a class="btn" href="#player/${pid(t.name)}">選手プロフィールを見る</a></div>`);
   } else { const S=n.S, r=record(leagueOf(S.season));
     P.push(`<p>${esc(S.season)}シーズンが終了しました。${S.league?`${esc(S.league)}は${S.rank?`${esc(S.rank)}位`:""}`:""}${r.n?`、公式戦${r.n}試合で${r.w}勝${r.d}分${r.l}敗（${r.gf}得点・${r.ga}失点）`:""}でした。</p>`);
-    const cups=[["",S.cups],["市民大会",S.cup],["播州大会",S.lcup],["その他の大会",S.intl]].filter(x=>x[1]);
+    const cups=[["",S.cups]].filter(x=>x[1]);
     if(cups.length) P.push(`<p>${cups.map(([k,v])=>k?`${k}：${esc(v)}`:esc(v)).join("<br>")}</p>`);
     const top=topOf(S.season,"g"); if(top) P.push(`<p>チーム得点王は${pLink(top.name)}（${top.g}点）。</p>`);
     if(S.cap) P.push(`<p>主将：${pLink(S.cap)}</p>`);
@@ -650,22 +606,6 @@ const bindSel = (id, fn) => { const el=$(id); if(el) el.onchange=()=>fn(el.value
 const band = (en, jp) => `<section class="pg-h"><div class="pg-in"><h1><span>${esc(en)}</span>${esc(jp)}</h1></div></section>`;
 const secH = (en, jp, more, moreTxt) => `<div class="sec-h"><h2><span>${en}</span>${jp}</h2>${more?`<a class="more" href="${more}">${moreTxt||"一覧を見る"}</a>`:""}</div>`;
 const dateEN = d => d ? `<b>${d.getMonth()+1}.${String(d.getDate()).padStart(2,"0")}<small>${WDE[d.getDay()]}</small></b>` : "<b>--</b>";
-
-/* 試合カード（HOME） */
-function matchBox(m, label){
-  const S=sides(m);
-  return `<div class="mbox"><div class="mbox-h"><b>${label}</b><span class="ha ${m.ha}" style="color:#fff">${m.ha==="H"?"HOME":m.ha==="A"?"AWAY":"NEUTRAL"}</span></div>
-    <a class="mbox-b" href="#match/${m.id}">
-      <div class="mdate">${dateEN(m.date)}<span style="font-size:12px;color:var(--ink2);font-weight:700">${m.date?m.date.getFullYear():""}</span></div>
-      <div class="mcomp">${compRoundH(m)}</div>
-      <div class="mboard"><div class="mteam">${logo(S.home)}${esc(S.home)}</div>
-        <div class="mscore">${m.played?`${S.hs}-${S.as}${m.pk?`<small>PK ${m.ha==="A"?`${m.pk.b}-${m.pk.a}`:`${m.pk.a}-${m.pk.b}`}</small>`:""}`:`<span class="vs">VS</span>`}</div>
-        <div class="mteam">${logo(S.away)}${esc(S.away)}</div></div>
-      ${m.played?`<div class="mres"><span class="res ${resCls(m)}">${resEN(m)}</span></div>`:""}
-    </a>
-    <div class="mlinks">${m.played?`<a href="#match/${m.id}">試合詳細</a>${hasStats(m)?`<a href="#match/${m.id}/stats">スタッツ</a>`:""}${m.lu.me.length?`<a href="#match/${m.id}/lineup">出場選手</a>`:""}`
-      :`<a href="#match">試合日程</a><a href="#match/${m.id}">対戦情報</a>`}</div></div>`;
-}
 
 /* ---------- 対戦成績 ---------- */
 const TEAM_ALIAS = { "グリンキャッツ":"グリーンキャッツ", "airial":"エアリアル", "パシエンシア姫路fc":"パシエンシア", "津田scサテライト":"津田サテライト", "f.c.volts":"fcvolts", "エンヤサール灘":"エンヤサール灘fc" };
@@ -1278,7 +1218,7 @@ const luTkl = l => l.s["タックル"] ?? ((l.s["スタンディングタック�
 const LU_GRP = [
   ["概要", [["評価","",1],["出場時間","分"],["得点"],["アシスト"],["シュート"],["シュート精度","%",0,l=>rate(l.s["枠内シュート"],l.s["シュート"])],["パス"],["パス成功率","%",0,l=>rate(l.s["パス成功"],l.s["パス"])],
     ["ドリブル"],["ドリブル成功率","%",0,l=>rate(l.s["ドリブル成功"],l.s["ドリブル"])],["タックル","",0,luTkl],["オフサイド"],["ファウル"],["ボール奪取"],["ボールロスト"],["走行距離","km",1],["スプリント距離","km",2],["警告"],["退場"]]],
-  ["ポゼッション", [["ボール保持率","%",1],["ドリブル成功"],["ドリブル距離","km",2],["タックルされた回数"],["獲得CK"],["被ファウル"],["獲得PK"],["ダミーからのアシスト"],
+  ["ポゼッション", [["ボール保持率","%",1],["ドリブル成功"],["ドリブル距離","km",2],["タックルされた回数"],["獲得CK"],["被ファウル"],["獲得PK"],
     ["抜き去り"],["スキルムーブで抜き去り"],["股抜き"],["縦への突破"]]],
   ["シュート", [["PKを除くゴール"],["PKを除くゴール期待値","",2],["枠内シュート"],["枠外シュート"],["ブロックされたシュート"],["FKゴール"],["PKゴール"],["シュートからのアシスト"],
     ["通常シュート"],["フィネスシュート"],["ヘディングシュート"],["パワーシュート"],["ボレーシュート"],["チップシュート"],["セットプレーのシュート"]]],
@@ -1363,13 +1303,11 @@ function vPlayers(){
     ${note?`<p class="note">${esc(note)}</p>`:""}</div></div>`;
 }
 function bPlayers(){ bindSel("pl-season", v=>{ ST.season=v; render(); }); }
-/* 選手のシーズン×大会ごとの出場・得点（出場選手シート → なければシーズン記録シート） */
+/* 選手のシーズン×大会ごとの出場・得点（出場選手シートから） */
 function careerOf(name){
   const S={};
   D.lineups.filter(l=>l.side==="me" && same(l.name,name) && l.m && l.m.played && (l.role!=="ベンチ" || l.min)).forEach(l=>{
     const se=l.m.season, cp=l.m.comp; const o=((S[se]=S[se]||{})[cp]=S[se][cp]||{apps:0,g:0,a:0}); o.apps++; o.g+=l.g||0; o.a+=l.a||0; });
-  D.srec.filter(r=>same(r.name,name)).forEach(r=>{ if(S[r.season]) return; const lg=leagueName(r.season)||D.conf["所属リーグ"]||"リーグ戦";
-    S[r.season]={[lg]:{apps:r.apps, g:r.g||0, a:r.a}}; });
   return S;
 }
 /* 前所属：「クラブ名（期間）」を → や改行で区切って何個でも。例）明石南高校（2015〜2017）→ 英賀保SC（2018〜2022） */
@@ -1606,27 +1544,6 @@ function standing(season, comp, mini){
       <td class="num">${r.p??""}</td>${mini?"":`<td class="num">${r.w??""}</td><td class="num">${r.d??""}</td><td class="num">${r.l??""}</td><td class="num">${r.gf??""}</td><td class="num">${r.ga??""}</td>`}
       <td class="num">${r.gf!=null&&r.ga!=null?(r.gf-r.ga>0?"+":"")+(r.gf-r.ga):""}</td><td class="num"><b>${r.pts??""}</b></td></tr>`; }).join("")}</tbody></table></div>`;
 }
-/* ユニフォームの文字（例「1st 赤・赤・赤／2nd 白・赤・白（GK 緑／黄）」）を色に */
-const KIT_COLOR = { 赤:"#d7001c", 白:"#ffffff", 黒:"#141414", 青:"#1f4fbf", 紺:"#1b2a4a", 緑:"#1f8a4c", 黄:"#f5c400", 黄色:"#f5c400", 水色:"#6cc4ea",
-  オレンジ:"#f08a00", 橙:"#f08a00", ピンク:"#f29ab8", 紫:"#6b3fa0", グレー:"#9a9a9a", 灰:"#9a9a9a", 銀:"#c0c0c0", 金:"#c9a24a", 黄緑:"#8cc63f", エンジ:"#8a1c2b" };
-function parseKits(t){
-  const out=[]; let lab="";
-  String(t||"").replace(/[（(]/g,"／").replace(/[）)]/g,"").split(/[／\/]/).map(x=>x.trim()).filter(Boolean).forEach(seg=>{
-    const m=seg.match(/^(1st|2nd|3rd|FP|GK|ホーム|アウェイ)?\s*(.*)$/i); if(m[1]) lab=m[1];
-    const cols=m[2].split(/[・,、\s]+/).filter(Boolean);
-    if(cols.length) out.push({ lab: m[1]||lab||"", cols });
-  });
-  const cnt={}; out.forEach(k=>cnt[k.lab]=(cnt[k.lab]||0)+1); const seen={};
-  out.forEach(k=>{ if(cnt[k.lab]>1){ seen[k.lab]=(seen[k.lab]||0)+1; k.lab=`${k.lab} (${seen[k.lab]})`; } });
-  return out;
-}
-function kitSvg(cols){
-  const c=i=>KIT_COLOR[cols[i]]||"none", st=i=>cols[i]?"#c8c8c8":"#d8d8d8", dash=i=>cols[i]?"":' stroke-dasharray="3 3"';
-  return `<svg viewBox="0 0 120 150" class="kit-svg" aria-hidden="true">
-    <path d="M38 8 L22 14 L4 34 L18 48 L28 40 L28 78 L92 78 L92 40 L102 48 L116 34 L98 14 L82 8 Q60 22 38 8Z" fill="${c(0)}" stroke="${st(0)}" stroke-width="1.5"${dash(0)}/>
-    <path d="M32 82 L88 82 L92 112 L64 112 L60 98 L56 112 L28 112Z" fill="${c(1)}" stroke="${st(1)}" stroke-width="1.5"${dash(1)}/>
-    <path d="M34 116 L50 116 L50 146 L34 146Z M70 116 L86 116 L86 146 L70 146Z" fill="${c(2)}" stroke="${st(2)}" stroke-width="1.5"${dash(2)}/></svg>`;
-}
 /* チーム理念：1行に1つ。「理念：説明」と書くと説明つき */
 const philoList = () => String(D.conf["チーム理念"]||"").split(/\r?\n|／/).map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/^(.+?)[：:]\s*(.+)$/); return m?{t:m[1].trim(),d:m[2].trim()}:{t:x,d:""}; });
 const philoHtml = L => `<ol class="philo-list">${L.map((x,i)=>`<li><b>${String(i+1).padStart(2,"0")}</b><div><p>${esc(x.t)}</p>${x.d?`<span>${esc(x.d)}</span>`:""}</div></li>`).join("")}</ol>`;
@@ -1634,7 +1551,6 @@ const clubSec = (id, en, jp) => `<div class="cs-h" id="${id}"><span>${en}</span>
 function vHistory(){
   const c=D.conf;
   const titles=[]; D.seasons.forEach(S=>{ if(/^1$/.test(S.rank)) titles.push([S.league||"リーグ",S.season]);
-    [["市民大会",S.cup],["播州大会",S.lcup],["その他の大会",S.intl]].forEach(([k,v])=>{ if(/^優勝/.test(v||"")) titles.push([k,S.season]); });
     String(S.cups||"").split(/[／\/、\n]/).forEach(x=>{ const m=x.trim().match(/^(.+?)\s*優勝$/); if(m) titles.push([m[1],S.season]); }); });
   const tc={}; titles.forEach(([k,se])=>(tc[k]=tc[k]||[]).push(se));
   const prof=[["クラブ名",clubName()],["設立",c["設立"]],["代表",clubRoleHolder("代表")],["所属リーグ",c["所属リーグ"]],["練習場所",c["練習場所"]],["メンバー",c["メンバー"]]].filter(([,v])=>v);
@@ -1642,10 +1558,10 @@ function vHistory(){
   const hy={}; D.hist.forEach(h=>(hy[h.y]=hy[h.y]||[]).push(h.t));
   const allS=[...new Set([...D.seasons.map(S=>S.season), ...D.seasonList])].sort().reverse();
   const recOf = se => { const r=record(leagueOf(se)); if(r.n) return r; const S=seasonInfo(se); if(S && S.rec[0]!=null) return {n:1,w:S.rec[0],d:S.rec[1]||0,l:S.rec[2]||0,gf:S.rec[3],ga:S.rec[4]}; return null; };
-  const topScorer = se => { const L=luAgg(se).filter(r=>r.g>0); const R=(L.length?L:D.srec.filter(r=>r.season===se&&r.g>0)).slice().sort((a,b)=>b.g-a.g);
+  const topScorer = se => { const L=luAgg(se).filter(r=>r.g>0); const R=L.slice().sort((a,b)=>b.g-a.g);
     if(!R.length) return ""; const mx=R[0].g; return R.filter(r=>r.g===mx).map(r=>esc(r.name)).join("、")+`（${mx}点）`; };
   /* カップ戦：出る大会はカテゴリーで変わるので、入っているものをまとめて1列に */
-  const cupOf = S => [["",S.cups],["市民大会",S.cup],["播州大会",S.lcup],["",S.intl]].filter(([,v])=>v).map(([k,v])=>k?`${k} ${v}`:v).join("／");
+  const cupOf = S => S.cups||"";
   const hasCup = D.seasons.some(S=>cupOf(S));
   const nav=[["c-profile","クラブ概要",1],["c-philo","チーム理念",philo.length],["c-history","沿革",D.hist.length],["c-titles","タイトル",Object.keys(tc).length],["c-records","歴代成績",allS.length]].filter(x=>x[2]);
   const cur=ST.season, r=record(leagueOf(cur)), rk=myRank(cur);
